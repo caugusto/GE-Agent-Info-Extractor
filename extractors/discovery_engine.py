@@ -349,7 +349,7 @@ def extract_discovery_engine_agents() -> List[Dict[str, Any]]:
                                                 platform = "Employee-made: Agent Designer (Gemini Enterprise)"
                                                 tool_types_list.append("Agent Designer Prompt")
                                             elif "a2aAgentDefinition" in ag:
-                                                platform = "A2A Agent"
+                                                platform = "Cloud Run (A2A)"
                                                 tool_types_list.append("A2A Protocol Endpoint")
                                             else:
                                                 platform = "Registered Agent"
