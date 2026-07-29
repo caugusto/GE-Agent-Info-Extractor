@@ -449,6 +449,34 @@ def extract_discovery_engine_agents() -> List[Dict[str, Any]]:
                                             elif not author:
                                                 author = primary_author_email
 
+                                            # Fetch Published Revisions / Version info
+                                            pub_version = "v1.0"
+                                            pub_date = u_ts or c_ts
+                                            try:
+                                                rev_url = f"https://{api_host}/v1alpha/{ag_full_id}/revisions"
+                                                rev_res = requests.get(rev_url, headers=headers, timeout=5)
+                                                if rev_res.status_code == 200:
+                                                    agent_revs = rev_res.json().get("agentRevisions", [])
+                                                    if agent_revs:
+                                                        sorted_revs = sorted(agent_revs, key=lambda x: x.get("createTime", ""))
+                                                        active_rev_name = ag.get("activeRevision")
+                                                        matched_idx = None
+                                                        if active_rev_name:
+                                                            for idx, r in enumerate(sorted_revs, 1):
+                                                                if r.get("name") == active_rev_name:
+                                                                    matched_idx = idx
+                                                                    if r.get("createTime") or r.get("updateTime"):
+                                                                        pub_date = _format_timestamp(r.get("createTime") or r.get("updateTime"))
+                                                                    break
+                                                        if not matched_idx:
+                                                            matched_idx = len(sorted_revs)
+                                                            latest_r = sorted_revs[-1]
+                                                            if latest_r.get("createTime") or latest_r.get("updateTime"):
+                                                                pub_date = _format_timestamp(latest_r.get("createTime") or latest_r.get("updateTime"))
+                                                        pub_version = f"v{matched_idx}.0"
+                                            except Exception as rev_ex:
+                                                logger.debug(f"Could not fetch revisions for agent {ag_full_id}: {rev_ex}")
+
                                             sharing = ag.get("sharingConfig", {})
                                             scope = sharing.get("scope", "RESTRICTED")
                                             is_everyone_reg = (scope == "ALL_USERS")
@@ -468,8 +496,8 @@ def extract_discovery_engine_agents() -> List[Dict[str, Any]]:
                                                 "agent_platform": platform,
                                                 "agent_created_date": c_ts,
                                                 "agent_modified_date": u_ts,
-                                                "agent_published_version": "v1.0",
-                                                "agent_published_date": u_ts or c_ts,
+                                                "agent_published_version": pub_version,
+                                                "agent_published_date": pub_date,
                                                 "agent_status": status,
                                                 "agent_environment": "Prod",
                                                 "agent_intent": ag_desc[:250] if ag_desc else "Conversational Assistant",
