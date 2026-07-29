@@ -47,6 +47,19 @@ def _get_authenticated_user(request: Request) -> str:
     return os.getenv("DEFAULT_USER_EMAIL", "admin@caugusto.altostrat.com")
 
 
+def _get_target_collection_id(collection_id: Optional[int] = None) -> int:
+    if collection_id is not None:
+        return collection_id
+    try:
+        q = f"SELECT MAX(collection_id) as max_id FROM `{FULL_TABLE_ID}`"
+        res = list(bq_client.query(q).result())
+        if res and res[0]["max_id"] is not None:
+            return res[0]["max_id"]
+    except Exception as ex:
+        logger.error(f"Error fetching max collection_id: {ex}")
+    return 1
+
+
 @app.get("/api/user")
 def get_user_profile(request: Request):
     """Returns currently authenticated user profile."""
@@ -84,7 +97,8 @@ def list_collections():
 def get_filter_options(collection_id: Optional[int] = Query(None)):
     """Returns distinct values for dropdown filters."""
     try:
-        where_clause = f"WHERE collection_id = {collection_id}" if collection_id else "WHERE collection_id = (SELECT MAX(collection_id) FROM `{FULL_TABLE_ID}`)"
+        col_id = _get_target_collection_id(collection_id)
+        where_clause = f"WHERE collection_id = {col_id}"
         
         query = f"""
         SELECT 
@@ -121,7 +135,8 @@ def get_filter_options(collection_id: Optional[int] = Query(None)):
 def get_summary_stats(collection_id: Optional[int] = Query(None)):
     """Computes computational overall stats for selected collection run."""
     try:
-        where_clause = f"WHERE collection_id = {collection_id}" if collection_id else "WHERE collection_id = (SELECT MAX(collection_id) FROM `{FULL_TABLE_ID}`)"
+        col_id = _get_target_collection_id(collection_id)
+        where_clause = f"WHERE collection_id = {col_id}"
         
         query = f"""
         SELECT 
@@ -172,11 +187,8 @@ def get_agents(
 ):
     """Returns filtered agent records."""
     try:
-        conditions = []
-        if collection_id is not None:
-            conditions.append(f"collection_id = {collection_id}")
-        else:
-            conditions.append(f"collection_id = (SELECT MAX(collection_id) FROM `{FULL_TABLE_ID}`)")
+        col_id = _get_target_collection_id(collection_id)
+        conditions = [f"collection_id = {col_id}"]
             
         if gcp_project_id:
             conditions.append(f"gcp_project_id = '{gcp_project_id}'")
