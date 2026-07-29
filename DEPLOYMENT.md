@@ -31,7 +31,13 @@ Ensure the service account `sa-ge-agent-extractor@agentspace-452714.iam.gservice
 
 ## 🚀 Deployment Instructions
 
-### Step 1: Enable GCP Service APIs
+### Step 1: Clone Repository & Navigate to Project Directory
+```bash
+git clone https://github.com/caugusto/GE-Agent-Info-Extractor.git
+cd GE-Agent-Info-Extractor
+```
+
+### Step 2: Enable GCP Service APIs
 ```bash
 gcloud services enable \
     cloudbuild.googleapis.com \
@@ -44,7 +50,7 @@ gcloud services enable \
     --project=agentspace-452714
 ```
 
-### Step 2: Create Service Account & Grant Roles
+### Step 3: Create Service Account & Grant Roles
 ```bash
 SA_EMAIL="sa-ge-agent-extractor@agentspace-452714.iam.gserviceaccount.com"
 
@@ -67,12 +73,15 @@ for ROLE in \
 done
 ```
 
-### Step 3: Build & Push Container Image
+### Step 4: Build & Push Container Image
+> [!NOTE]
+> Execute this command from the **root directory** of the cloned repository (`GE-Agent-Info-Extractor/`) where the `Dockerfile` is located. The trailing dot (`.`) specifies the build context directory.
+
 ```bash
 gcloud builds submit --tag gcr.io/agentspace-452714/ge-agent-extractor:latest .
 ```
 
-### Step 4: Create Cloud Run Job
+### Step 5: Create Cloud Run Job
 ```bash
 gcloud run jobs create ge-agent-inventory-job \
     --image gcr.io/agentspace-452714/ge-agent-extractor:latest \
@@ -84,7 +93,7 @@ gcloud run jobs create ge-agent-inventory-job \
     --project agentspace-452714
 ```
 
-### Step 5: Schedule Job Every 4 Hours
+### Step 6: Schedule Job Every 4 Hours
 ```bash
 gcloud scheduler jobs create http ge-agent-inventory-4h \
     --schedule="0 */4 * * *" \
