@@ -3,7 +3,7 @@ import HeaderStats from './components/HeaderStats';
 import FilterBar from './components/FilterBar';
 import AgentCard from './components/AgentCard';
 import AgentDetailDrawer from './components/AgentDetailDrawer';
-import { Bot, Grid, List, RefreshCw, ShieldCheck, User, Sparkles } from 'lucide-react';
+import { Bot, Grid, List, RefreshCw, ShieldCheck, User, Download, RotateCcw, FileSpreadsheet } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -16,7 +16,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
 
-  // Default Filters
+  // Default Filters State
   const initialFilters = {
     gcp_project_id: '',
     instance_name: '',
@@ -26,6 +26,8 @@ export default function App() {
     author: '',
     environment: '',
     search: '',
+    is_shared: '', // '' or boolean
+    is_available_to_everyone: '', // '' or boolean
     uses_rag: false,
     uses_mcp: false,
     uses_tools: false,
@@ -86,6 +88,12 @@ export default function App() {
     if (filters.environment) params.append('environment', filters.environment);
     if (filters.search) params.append('search', filters.search);
     
+    if (filters.is_shared === true) params.append('is_shared', 'true');
+    if (filters.is_shared === false) params.append('is_shared', 'false');
+
+    if (filters.is_available_to_everyone === true) params.append('is_available_to_everyone', 'true');
+    if (filters.is_available_to_everyone === false) params.append('is_available_to_everyone', 'false');
+
     if (filters.uses_rag) params.append('uses_rag', 'true');
     if (filters.uses_mcp) params.append('uses_mcp', 'true');
     if (filters.uses_tools) params.append('uses_tools', 'true');
@@ -111,44 +119,84 @@ export default function App() {
     setFilters(initialFilters);
   };
 
+  // Export Filtered List to CSV with ALL Columns
+  const handleExportCSV = () => {
+    if (!agents || agents.length === 0) return;
+
+    // Extract all unique keys across all agent records
+    const allKeys = Array.from(
+      new Set(agents.flatMap(ag => Object.keys(ag)))
+    );
+
+    // Helper to format cell value for CSV
+    const formatCell = (val) => {
+      if (val === null || val === undefined) return '""';
+      if (typeof val === 'boolean') return val ? '"TRUE"' : '"FALSE"';
+      if (Array.isArray(val)) return `"${val.join('; ').replace(/"/g, '""')}"`;
+      if (typeof val === 'object') return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    // Header row
+    const headers = allKeys.map(k => `"${k}"`).join(',');
+
+    // Data rows
+    const rows = agents.map(ag => {
+      return allKeys.map(k => formatCell(ag[k])).join(',');
+    });
+
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+    link.setAttribute('download', `ge_agent_inventory_export_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="min-h-screen bg-black text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       
       {/* Top Application Navbar */}
-      <header className="border-b border-dark-border bg-dark-bg/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
           {/* Logo & Title */}
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-tr from-google-blue via-google-green to-google-yellow">
-              <Bot className="w-6 h-6 text-black font-bold" />
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-google-blue via-google-green to-google-yellow shadow-sm">
+              <Bot className="w-7 h-7 text-white font-extrabold" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
                 Gemini Enterprise Agent Inventory
-                <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-google-blue/20 text-google-blue border border-google-blue/30">
+                <span className="px-2.5 py-0.5 text-xs uppercase font-extrabold tracking-wider rounded-md bg-blue-100 text-google-blue border border-blue-200">
                   Dashboard
                 </span>
               </h1>
-              <p className="text-[11px] text-slate-400">Enterprise AI Agents, Reasoning Engines & Cloud Run Inventory</p>
+              <p className="text-xs md:text-sm font-semibold text-slate-500">Enterprise AI Agents, Reasoning Engines & Cloud Run Inventory</p>
             </div>
           </div>
 
           {/* User Profile & Security Badge */}
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-google-green/10 border border-google-green/30 text-google-green text-xs font-medium">
+            <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-green-50 border border-green-200 text-google-green text-xs font-bold">
               <ShieldCheck className="w-4 h-4" />
-              <span>Direct Cloud Run IAP Protected</span>
+              <span>Cloud Run IAP Protected</span>
             </div>
 
             {user && (
-              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border">
-                <div className="w-7 h-7 rounded-full bg-google-blue/20 text-google-blue flex items-center justify-center font-bold text-xs">
+              <div className="flex items-center gap-3 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200">
+                <div className="w-8 h-8 rounded-full bg-google-blue text-white flex items-center justify-center font-bold text-sm shadow-xs">
                   {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div className="text-left hidden md:block">
-                  <span className="text-xs font-semibold text-white block">{user.email}</span>
-                  <span className="text-[10px] text-slate-400 block">Authorized Access</span>
+                  <span className="text-xs md:text-sm font-extrabold text-slate-900 block">{user.email}</span>
+                  <span className="text-[11px] font-semibold text-slate-500 block">Authorized Admin</span>
                 </div>
               </div>
             )}
@@ -160,8 +208,8 @@ export default function App() {
       {/* Main Dashboard Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Computational Summary Stats Cards */}
-        <HeaderStats stats={stats} />
+        {/* Computational Summary Stats Cards with Clickable Filters */}
+        <HeaderStats stats={stats} filters={filters} setFilters={setFilters} />
 
         {/* Multi-Dimensional Filter Toolbar */}
         <FilterBar
@@ -174,67 +222,83 @@ export default function App() {
           onReset={handleResetFilters}
         />
 
-        {/* View Switcher Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-white">Agent Inventory</h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-dark-card border border-dark-border text-xs font-mono text-slate-300">
+        {/* View Switcher & CSV Export Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Agent Inventory</h2>
+            <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-xs md:text-sm font-bold text-slate-700 shadow-2xs">
               {agents.length} agent{agents.length !== 1 ? 's' : ''} found
             </span>
           </div>
 
-          <div className="flex items-center gap-2 bg-dark-card p-1 rounded-xl border border-dark-border">
+          <div className="flex items-center gap-3">
+            
+            {/* Export CSV Button */}
             <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                viewMode === 'grid' ? 'bg-google-blue text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              onClick={handleExportCSV}
+              disabled={agents.length === 0}
+              className="flex items-center gap-2 px-4 py-2.5 bg-google-green hover:bg-green-700 text-white rounded-xl text-xs md:text-sm font-extrabold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              <Grid className="w-4 h-4" /> Grid
+              <FileSpreadsheet className="w-4 h-4" />
+              Export to CSV ({agents.length})
             </button>
 
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                viewMode === 'table' ? 'bg-google-blue text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <List className="w-4 h-4" /> Table
-            </button>
+            {/* Grid / Table Toggle */}
+            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2.5 rounded-lg text-xs md:text-sm font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === 'grid' ? 'bg-google-blue text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Grid className="w-4 h-4" /> Grid
+              </button>
+
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-2.5 rounded-lg text-xs md:text-sm font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === 'table' ? 'bg-google-blue text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <List className="w-4 h-4" /> Table
+              </button>
+            </div>
+
           </div>
         </div>
 
         {/* Loading Spinner */}
         {loading ? (
-          <div className="py-20 flex flex-col items-center justify-center text-slate-400">
-            <RefreshCw className="w-8 h-8 animate-spin text-google-blue mb-3" />
-            <p className="text-sm font-medium">Querying BigQuery Agent Inventory...</p>
+          <div className="py-24 flex flex-col items-center justify-center text-slate-500">
+            <RefreshCw className="w-10 h-10 animate-spin text-google-blue mb-3" />
+            <p className="text-base font-bold">Querying BigQuery Agent Inventory...</p>
           </div>
         ) : agents.length === 0 ? (
-          <div className="glass-panel p-12 rounded-2xl text-center border border-dark-border my-8">
-            <Bot className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-white">No agents match your filter criteria</h3>
-            <p className="text-xs text-slate-400 mt-1 mb-4">Try clearing or adjusting search filters to see all available agents.</p>
+          <div className="glass-panel p-12 md:p-16 rounded-2xl text-center border border-slate-200 bg-white my-8 shadow-sm">
+            <Bot className="w-14 h-14 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-xl font-extrabold text-slate-900">No agents match your filter criteria</h3>
+            <p className="text-sm font-medium text-slate-500 mt-1 mb-6">Try clearing or adjusting search filters to see all available agents.</p>
             <button
               onClick={handleResetFilters}
-              className="px-4 py-2 bg-google-blue hover:bg-blue-600 text-white text-xs font-semibold rounded-xl transition-all"
+              className="px-6 py-3 bg-google-blue hover:bg-blue-700 text-white text-sm font-extrabold rounded-xl transition-all cursor-pointer shadow-xs"
             >
-              Reset Filters
+              Reset All Filters
             </button>
           </div>
         ) : viewMode === 'grid' ? (
           /* Grid View */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {agents.map((ag) => (
               <AgentCard key={ag.agent_id || ag.agent_name} agent={ag} onSelect={setSelectedAgent} />
             ))}
           </div>
         ) : (
           /* Table View */
-          <div className="glass-panel rounded-2xl overflow-hidden border border-dark-border">
+          <div className="glass-panel rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-dark-card border-b border-dark-border text-slate-400 uppercase tracking-wider font-semibold">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase tracking-wider font-extrabold text-xs">
                   <tr>
                     <th className="p-4">Agent Name</th>
                     <th className="p-4">Platform</th>
@@ -245,45 +309,45 @@ export default function App() {
                     <th className="p-4">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-dark-border/50 text-slate-200">
+                <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
                   {agents.map((ag) => (
                     <tr
                       key={ag.agent_id || ag.agent_name}
                       onClick={() => setSelectedAgent(ag)}
-                      className="hover:bg-dark-hover/80 cursor-pointer transition-colors"
+                      className="hover:bg-slate-50 cursor-pointer transition-colors"
                     >
-                      <td className="p-4 font-bold text-white">{ag.agent_name}</td>
+                      <td className="p-4 font-bold text-slate-900">{ag.agent_name}</td>
                       <td className="p-4">
-                        <span className="px-2 py-0.5 rounded bg-google-blue/10 text-google-blue font-medium border border-google-blue/20">
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-google-blue font-bold border border-blue-200 text-xs">
                           {(ag.agent_platform || '').replace('Employee-made: ', '')}
                         </span>
                       </td>
-                      <td className="p-4 text-slate-400">
+                      <td className="p-4 text-slate-600 font-semibold">
                         {ag.gemini_enterprise_instance_name && ag.gemini_enterprise_instance_name !== 'N/A'
                           ? ag.gemini_enterprise_instance_name
                           : ag.gcp_project_id}
                       </td>
                       <td className="p-4">
                         <span
-                          className={`font-semibold ${
+                          className={`font-bold ${
                             ag.is_available_to_everyone
                               ? 'text-google-green'
                               : ag.is_shared
-                              ? 'text-amber-400'
-                              : 'text-slate-400'
+                              ? 'text-amber-700'
+                              : 'text-slate-500'
                           }`}
                         >
                           {ag.access_scope || 'Private'}
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="px-2 py-0.5 rounded bg-google-green/10 text-google-green font-medium border border-google-green/20">
+                        <span className="px-2.5 py-1 rounded-lg bg-green-100 text-google-green font-bold border border-green-200 text-xs">
                           {ag.agent_status || 'Published'}
                         </span>
                       </td>
-                      <td className="p-4 text-slate-400">{ag.author_email}</td>
+                      <td className="p-4 text-slate-600 font-semibold">{ag.author_email}</td>
                       <td className="p-4">
-                        <button className="px-2.5 py-1 bg-dark-card hover:bg-google-blue text-slate-300 hover:text-white rounded-lg border border-dark-border text-[11px] font-semibold transition-all">
+                        <button className="px-3 py-1.5 bg-slate-100 hover:bg-google-blue text-slate-700 hover:text-white rounded-lg border border-slate-200 text-xs font-bold transition-all cursor-pointer">
                           Inspect
                         </button>
                       </td>

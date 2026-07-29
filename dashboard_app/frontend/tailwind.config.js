@@ -8,17 +8,17 @@ export default {
     extend: {
       colors: {
         google: {
-          blue: '#4285F4',
-          green: '#34A853',
-          yellow: '#FBBC05',
-          red: '#EA4335',
-          purple: '#A142F4',
+          blue: '#1A73E8',
+          green: '#137333',
+          yellow: '#B06000',
+          red: '#C5221F',
+          purple: '#9334E6',
         },
-        dark: {
-          bg: '#08080C',
-          card: '#12121A',
-          border: '#222232',
-          hover: '#1B1B26',
+        light: {
+          bg: '#F8FAFC',
+          card: '#FFFFFF',
+          border: '#E2E8F0',
+          hover: '#F1F5F9',
         }
       }
     },

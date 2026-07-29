@@ -1,7 +1,7 @@
 import React from 'react';
-import { Bot, ShieldCheck, Cpu, Database, Users, Sparkles, Layers } from 'lucide-react';
+import { Bot, Users, Database, Cpu, Sparkles, Filter, Check } from 'lucide-react';
 
-export default function HeaderStats({ stats }) {
+export default function HeaderStats({ stats, filters, setFilters }) {
   if (!stats || Object.keys(stats).length === 0) return null;
 
   const total = stats.total_agents || 0;
@@ -15,96 +15,213 @@ export default function HeaderStats({ stats }) {
   const tools = stats.uses_tools_count || 0;
   const code = stats.uses_code_count || 0;
 
+  // Helper to update filters
+  const applyFilter = (key, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: prev[key] === value ? '' : value
+    }));
+  };
+
+  const toggleBooleanFilter = (key) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      {/* Total Agents Card */}
-      <div className="glass-panel p-5 rounded-2xl border-t-2 border-t-google-blue relative overflow-hidden group">
-        <div className="flex items-center justify-between">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      
+      {/* 1. Total Agents Card */}
+      <div className="glass-panel glass-panel-hover p-6 md:p-7 rounded-2xl border-t-4 border-t-google-blue bg-white flex flex-col justify-between shadow-sm hover:shadow-md">
+        <div 
+          onClick={() => setFilters(prev => ({ ...prev, platform: '' }))}
+          className="cursor-pointer group flex items-start justify-between"
+          title="Click to show all platforms"
+        >
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Agents</p>
-            <h3 className="text-3xl font-bold text-white mt-1">{total}</h3>
+            <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Total Agents</p>
+            <h3 className="text-4xl md:text-5xl font-black text-slate-900 mt-2 tracking-tight group-hover:text-google-blue transition-colors">
+              {total}
+            </h3>
           </div>
-          <div className="p-3 bg-google-blue/10 text-google-blue rounded-xl group-hover:scale-110 transition-transform">
-            <Bot className="w-6 h-6" />
+          <div className="p-3.5 bg-blue-50 text-google-blue rounded-2xl group-hover:scale-110 transition-transform shadow-xs">
+            <Bot className="w-8 h-8" />
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-google-blue/20 text-google-blue font-semibold">
+
+        {/* Interactive Clickable Platform Pills */}
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => applyFilter('platform', 'Employee-made: Agent Designer (Gemini Enterprise)')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              filters.platform === 'Employee-made: Agent Designer (Gemini Enterprise)'
+                ? 'bg-google-blue text-white border-google-blue shadow-xs'
+                : 'bg-blue-50/80 text-google-blue border-blue-200 hover:bg-blue-100'
+            }`}
+          >
             {stats.count_agent_designer || 0} No-Code
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-semibold">
+          </button>
+
+          <button
+            type="button"
+            onClick={() => applyFilter('platform', 'Agent Runtime')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              filters.platform === 'Agent Runtime'
+                ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+            }`}
+          >
             {stats.count_agent_runtime || 0} ADK Code
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold">
+          </button>
+
+          <button
+            type="button"
+            onClick={() => applyFilter('platform', 'Cloud Run (A2A)')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              filters.platform === 'Cloud Run (A2A)'
+                ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+            }`}
+          >
             {stats.count_cloud_run || 0} Cloud Run
-          </span>
+          </button>
         </div>
       </div>
 
-      {/* Sharing Scope Card */}
-      <div className="glass-panel p-5 rounded-2xl border-t-2 border-t-google-green relative overflow-hidden group">
-        <div className="flex items-center justify-between">
+      {/* 2. Sharing Exposure Card */}
+      <div className="glass-panel glass-panel-hover p-6 md:p-7 rounded-2xl border-t-4 border-t-google-green bg-white flex flex-col justify-between shadow-sm hover:shadow-md">
+        <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Sharing Exposure</p>
-            <h3 className="text-3xl font-bold text-white mt-1">
+            <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Sharing Exposure</p>
+            <h3 className="text-4xl md:text-5xl font-black text-slate-900 mt-2 tracking-tight">
               {total > 0 ? Math.round((shared / total) * 100) : 0}%
             </h3>
           </div>
-          <div className="p-3 bg-google-green/10 text-google-green rounded-xl group-hover:scale-110 transition-transform">
-            <Users className="w-6 h-6" />
+          <div className="p-3.5 bg-green-50 text-google-green rounded-2xl shadow-xs">
+            <Users className="w-8 h-8" />
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-google-green/20 text-google-green font-semibold">
+
+        {/* Interactive Clickable Sharing Pills */}
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => applyFilter('is_available_to_everyone', true)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              filters.is_available_to_everyone === true
+                ? 'bg-google-green text-white border-google-green shadow-xs'
+                : 'bg-green-50 text-google-green border-green-200 hover:bg-green-100'
+            }`}
+          >
             {enterprise} Enterprise
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold">
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setFilters(prev => ({
+                ...prev,
+                is_shared: prev.is_shared === true && prev.is_available_to_everyone === false ? '' : true,
+                is_available_to_everyone: false
+              }));
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              filters.is_shared === true && filters.is_available_to_everyone === false
+                ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+            }`}
+          >
             {restricted} Restricted
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-semibold">
+          </button>
+
+          <button
+            type="button"
+            onClick={() => applyFilter('is_shared', false)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              filters.is_shared === false
+                ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
+                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+            }`}
+          >
             {privateCount} Private
-          </span>
+          </button>
         </div>
       </div>
 
-      {/* RAG & Knowledge Sources Card */}
-      <div className="glass-panel p-5 rounded-2xl border-t-2 border-t-google-yellow relative overflow-hidden group">
-        <div className="flex items-center justify-between">
+      {/* 3. RAG / Data Stores Card */}
+      <div 
+        onClick={() => toggleBooleanFilter('uses_rag')}
+        className={`glass-panel glass-panel-hover p-6 md:p-7 rounded-2xl border-t-4 border-t-google-yellow bg-white flex flex-col justify-between shadow-sm hover:shadow-md cursor-pointer ${
+          filters.uses_rag ? 'ring-2 ring-google-yellow bg-amber-50/30' : ''
+        }`}
+      >
+        <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">RAG / Data Stores</p>
-            <h3 className="text-3xl font-bold text-white mt-1">
+            <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">RAG / Data Stores</p>
+            <h3 className="text-4xl md:text-5xl font-black text-slate-900 mt-2 tracking-tight">
               {total > 0 ? Math.round((rag / total) * 100) : 0}%
             </h3>
           </div>
-          <div className="p-3 bg-google-yellow/10 text-google-yellow rounded-xl group-hover:scale-110 transition-transform">
-            <Database className="w-6 h-6" />
+          <div className="p-3.5 bg-amber-50 text-google-yellow rounded-2xl shadow-xs">
+            <Database className="w-8 h-8" />
           </div>
         </div>
-        <p className="mt-4 text-xs text-slate-400">
-          <strong className="text-google-yellow">{rag}</strong> agents connect to Drive, Gmail, BQ or Data Stores
-        </p>
+
+        <div className="mt-6 flex items-center justify-between">
+          <p className="text-xs font-bold text-slate-600">
+            <strong className="text-amber-700 font-extrabold text-sm">{rag}</strong> agents with Drive, Gmail, BQ or Data Stores
+          </p>
+          <span className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold uppercase tracking-wide border ${
+            filters.uses_rag ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-100 text-slate-600 border-slate-200'
+          }`}>
+            {filters.uses_rag ? 'Filtered' : 'Filter'}
+          </span>
+        </div>
       </div>
 
-      {/* Code & Tooling Capabilities Card */}
-      <div className="glass-panel p-5 rounded-2xl border-t-2 border-t-google-red relative overflow-hidden group">
-        <div className="flex items-center justify-between">
+      {/* 4. MCP & Tools Card */}
+      <div className="glass-panel glass-panel-hover p-6 md:p-7 rounded-2xl border-t-4 border-t-google-red bg-white flex flex-col justify-between shadow-sm hover:shadow-md">
+        <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">MCP & Tools</p>
-            <h3 className="text-3xl font-bold text-white mt-1">{tools}</h3>
+            <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">MCP & Tools</p>
+            <h3 className="text-4xl md:text-5xl font-black text-slate-900 mt-2 tracking-tight">{tools}</h3>
           </div>
-          <div className="p-3 bg-google-red/10 text-google-red rounded-xl group-hover:scale-110 transition-transform">
-            <Cpu className="w-6 h-6" />
+          <div className="p-3.5 bg-red-50 text-google-red rounded-2xl shadow-xs">
+            <Cpu className="w-8 h-8" />
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-google-red/20 text-google-red font-semibold">
+
+        {/* Interactive Clickable Tool Pills */}
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => toggleBooleanFilter('uses_mcp')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              filters.uses_mcp
+                ? 'bg-google-red text-white border-google-red shadow-xs'
+                : 'bg-red-50 text-google-red border-red-200 hover:bg-red-100'
+            }`}
+          >
             {mcp} MCP Servers
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-semibold">
+          </button>
+
+          <button
+            type="button"
+            onClick={() => toggleBooleanFilter('uses_code')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              filters.uses_code
+                ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+            }`}
+          >
             {code} Python Sandbox
-          </span>
+          </button>
         </div>
       </div>
+
     </div>
   );
 }

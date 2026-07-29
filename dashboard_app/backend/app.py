@@ -184,6 +184,8 @@ def get_agents(
     uses_mcp: Optional[bool] = Query(None),
     uses_tools: Optional[bool] = Query(None),
     uses_code: Optional[bool] = Query(None),
+    is_shared: Optional[bool] = Query(None),
+    is_available_to_everyone: Optional[bool] = Query(None),
 ):
     """Returns filtered agent records."""
     try:
@@ -205,6 +207,16 @@ def get_agents(
         if environment:
             conditions.append(f"agent_environment = '{environment}'")
             
+        if is_shared is True:
+            conditions.append("is_shared IS TRUE")
+        elif is_shared is False:
+            conditions.append("(is_shared IS FALSE OR is_shared IS NULL)")
+
+        if is_available_to_everyone is True:
+            conditions.append("is_available_to_everyone IS TRUE")
+        elif is_available_to_everyone is False:
+            conditions.append("(is_available_to_everyone IS FALSE OR is_available_to_everyone IS NULL)")
+
         if uses_rag is True:
             conditions.append("(uses_knowledge_sources = TRUE OR uses_rag = TRUE)")
         if uses_mcp is True:
