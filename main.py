@@ -29,7 +29,7 @@ def _get_next_collection_id(bq_client: bigquery.Client, full_table_id: str, csv_
         if results and results[0].max_id is not None:
             return int(results[0].max_id) + 1
     except Exception as e:
-        logger.debug(f"Could not fetch max collection_id from BigQuery: {e}")
+        logger.warning(f"Could not fetch max collection_id from BigQuery: {e}")
 
     # Fallback check on existing CSV file
     if os.path.exists(csv_output):
