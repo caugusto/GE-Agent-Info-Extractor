@@ -81,7 +81,9 @@ gcloud services enable \
 ```
 
 ### 2. Required GCP IAM Roles
-Your authenticated GCP user or service account requires the following roles at the project level:
+For quick setup or developer environments, assigning the single **Editor** role (`roles/editor`) at the project level covers all required operations across BigQuery, Discovery Engine, Vertex AI, and Cloud Run.
+
+Alternatively, for a granular least-privilege setup, assign the following standard roles:
 - **BigQuery Data Editor** (`roles/bigquery.dataEditor`): Create/update dataset & table, insert records.
 - **BigQuery Job User** (`roles/bigquery.jobUser`): Execute BigQuery queries for incremental `collection_id` checks.
 - **Discovery Engine Viewer** (`roles/discoveryengine.viewer`): Read Gemini Enterprise / Agent Designer agents & controls.

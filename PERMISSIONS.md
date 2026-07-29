@@ -8,8 +8,18 @@ To follow the **Principle of Least Privilege**, this document outlines the exact
 
 When running the extractor locally via CLI (`.venv/bin/python3 main.py` or `gcloud`), the user's account requires read access to agent inventory sources and read/write access to the BigQuery target dataset.
 
-### Recommended Least-Privilege Standard Roles
-Assign the following pre-defined roles to the user at the **GCP Project level**:
+### Recommended Roles
+
+#### Single-Role Quick Setup
+For developer environments or simplified access, assigning the single **Project Editor** role (`roles/editor`) provides all required permissions across BigQuery, Discovery Engine, Vertex AI, and Cloud Run:
+```bash
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="user:your-email@domain.com" \
+    --role="roles/editor"
+```
+
+#### Least-Privilege Granular Standard Roles
+Alternatively, for a restricted least-privilege setup, assign the following granular roles at the **GCP Project level**:
 
 | Service | Recommended IAM Role | Purpose / Scope |
 | :--- | :--- | :--- |
