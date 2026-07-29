@@ -71,13 +71,16 @@ Ensure the following Google Cloud APIs are enabled in your project:
 - **IAM Credentials API**: `iamcredentials.googleapis.com`
 
 ```bash
+# Define GCP project ID environment variable
+export GCP_PROJECT="your-gcp-project-id"  # e.g., agentspace-452714
+
 gcloud services enable \
     discoveryengine.googleapis.com \
     aiplatform.googleapis.com \
     run.googleapis.com \
     bigquery.googleapis.com \
     iamcredentials.googleapis.com \
-    --project=agentspace-452714
+    --project="${GCP_PROJECT}"
 ```
 
 ### 2. Required GCP IAM Roles
@@ -104,9 +107,10 @@ source .venv/bin/activate
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Authenticate with Google Cloud
+# 3. Set environment variable & authenticate with Google Cloud
+export GCP_PROJECT="your-gcp-project-id"
 gcloud auth application-default login
-gcloud config set project agentspace-452714
+gcloud config set project "${GCP_PROJECT}"
 
 # 4. Execute extraction and load to default BigQuery dataset/table
 python3 main.py

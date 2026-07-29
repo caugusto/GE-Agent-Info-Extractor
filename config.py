@@ -12,6 +12,9 @@ import os
 # GCP Project ID and Project Number
 PROJECT_ID = os.getenv("GCP_PROJECT", "agentspace-452714")
 PROJECT_NUMBER = os.getenv("GCP_PROJECT_NUMBER", "16933400417")
+REGION = os.getenv("REGION", "us-central1")
+SA_NAME = os.getenv("SA_NAME", "sa-ge-agent-extractor")
+SA_EMAIL = f"{SA_NAME}@{PROJECT_ID}.iam.gserviceaccount.com"
 
 # ==============================================================================
 # BigQuery Target Settings

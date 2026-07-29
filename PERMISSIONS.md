@@ -13,8 +13,11 @@ When running the extractor locally via CLI (`.venv/bin/python3 main.py` or `gclo
 #### Single-Role Quick Setup
 For developer environments or simplified access, assigning the single **Project Editor** role (`roles/editor`) provides all required permissions across BigQuery, Discovery Engine, Vertex AI, and Cloud Run:
 ```bash
-gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="user:your-email@domain.com" \
+export GCP_PROJECT="${GCP_PROJECT:-your-gcp-project-id}"
+export USER_EMAIL="your-email@domain.com"
+
+gcloud projects add-iam-policy-binding "${GCP_PROJECT}" \
+    --member="user:${USER_EMAIL}" \
     --role="roles/editor"
 ```
 
@@ -33,16 +36,16 @@ Alternatively, for a restricted least-privilege setup, assign the following gran
 
 ## 2. Service Account Execution (Cloud Run / Cloud Scheduler)
 
-When deployed as a containerized job on **Cloud Run** (or triggered via **Cloud Scheduler**), assign a dedicated Service Account (e.g. `sa-ge-agent-extractor@<PROJECT_ID>.iam.gserviceaccount.com`) with minimum required permissions.
+When deployed as a containerized job on **Cloud Run** (or triggered via **Cloud Scheduler**), assign a dedicated Service Account (e.g. `sa-ge-agent-extractor@<GCP_PROJECT>.iam.gserviceaccount.com`) with minimum required permissions.
 
 ### A. Assigning Standard Roles to the Service Account
 Using `gcloud`:
 
 ```bash
-# Set variables
-PROJECT_ID="agentspace-452714"
-SA_NAME="sa-ge-agent-extractor"
-SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+# Set environment variables
+export GCP_PROJECT="${GCP_PROJECT:-your-gcp-project-id}"
+export SA_NAME="${SA_NAME:-sa-ge-agent-extractor}"
+export SA_EMAIL="${SA_NAME}@${GCP_PROJECT}.iam.gserviceaccount.com"
 
 # 1. Create Service Account
 gcloud iam service-accounts create ${SA_NAME} \
