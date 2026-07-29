@@ -85,7 +85,7 @@ def extract_vertex_reasoning_engines() -> List[Dict[str, Any]]:
                         "agent_modified_date": updated_ts,
                         "agent_published_version": "v1.0",
                         "agent_published_date": updated_ts or created_ts,
-                        "agent_status": "Published",
+                        "agent_status": "Published (Private)",
                         "agent_environment": "Dev / Prod",
                         "agent_intent": f"Code Agent ({display_name})",
 

@@ -46,7 +46,21 @@ ge_agent_extractor/
 
 ---
 
-## Quick Start (Local Execution)
+## ⚙️ Configuration (`config.py`)
+
+The target BigQuery dataset, table, GCP Project, and scan regions can be configured in **[config.py](config.py)** or overridden via environment variables:
+
+| Setting | `config.py` Variable | Environment Variable | Default Value | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Dataset Name** | `DEFAULT_BQ_DATASET` | `BQ_DATASET` | `ge_agent_inventory` | Target BigQuery dataset |
+| **Table Name** | `DEFAULT_BQ_TABLE` | `BQ_TABLE` | `agent_details` | Target BigQuery table |
+| **GCP Project** | `PROJECT_ID` | `GCP_PROJECT` | `agentspace-452714` | Target GCP project |
+| **BigQuery Location** | `BQ_LOCATION` | `BQ_LOCATION` | `US` | BigQuery dataset location |
+| **CSV Output** | `DEFAULT_CSV_OUTPUT` | `CSV_OUTPUT` | `agent_inventory_dry_run.csv` | Output file for dry-run mode |
+
+---
+
+## 🚀 Quick Start & CLI Options (`main.py`)
 
 ```bash
 # 1. Activate virtual environment
@@ -56,11 +70,33 @@ source .venv/bin/activate
 gcloud auth application-default login
 gcloud config set project agentspace-452714
 
-# 3. Execute extraction and load to BigQuery
+# 3. Execute extraction and load to default BigQuery dataset/table
 python3 main.py
+```
 
-# Or dry-run mode (outputs CSV)
-python3 main.py --dry-run
+### CLI Command Options
+
+You can customize execution parameters by passing options to `main.py`:
+
+| Flag | Long Flag | Description | Default |
+| :--- | :--- | :--- | :--- |
+| `-d` | `--dataset` | Specify target BigQuery dataset name | `ge_agent_inventory` |
+| `-t` | `--table` | Specify target BigQuery table name | `agent_details` |
+| | `--dry-run` | Extract agents and output to CSV without inserting into BigQuery | `False` |
+| `-o` | `--output` | CSV output file path for dry-run mode | `agent_inventory_dry_run.csv` |
+| `-s` | `--execution-source` | Execution source tag (`MANUAL_CLI`, `CLOUD_RUN_JOB`, `CLOUD_SCHEDULER`) | Auto-detected |
+
+### Usage Examples
+
+```bash
+# Custom BigQuery dataset and table
+python3 main.py -d my_custom_dataset -t custom_agent_details
+
+# Dry run mode (generates CSV without inserting to BigQuery)
+python3 main.py --dry-run -o my_inventory.csv
+
+# Specify custom dataset and execution source
+python3 main.py -d ge_agent_inventory -t agent_details -s MANUAL_CLI
 ```
 
 For full deployment instructions to Cloud Run and Cloud Scheduler, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.

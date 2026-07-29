@@ -35,7 +35,7 @@ AGENT_DETAILS_SCHEMA = [
     bigquery.SchemaField("agent_modified_date", "TIMESTAMP", mode="NULLABLE", description="Last modification timestamp"),
     bigquery.SchemaField("agent_published_version", "STRING", mode="NULLABLE", description="Published version identifier"),
     bigquery.SchemaField("agent_published_date", "TIMESTAMP", mode="NULLABLE", description="Published timestamp"),
-    bigquery.SchemaField("agent_status", "STRING", mode="NULLABLE", description="Status (Draft, Published, Archived, Enabled, Private)"),
+    bigquery.SchemaField("agent_status", "STRING", mode="NULLABLE", description="Status (Published (Private), Published (Enabled), Draft, Disabled)"),
     bigquery.SchemaField("agent_environment", "STRING", mode="NULLABLE", description="Environment (Dev, Test, Prod)"),
     bigquery.SchemaField("agent_intent", "STRING", mode="NULLABLE", description="Agent intent or primary task goal"),
 

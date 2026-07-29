@@ -131,7 +131,7 @@ def extract_cloud_run_agents() -> List[Dict[str, Any]]:
                     "agent_modified_date": updated_ts,
                     "agent_published_version": card_version,
                     "agent_published_date": created_ts,
-                    "agent_status": "Published",
+                    "agent_status": "Published (Enabled)" if is_public else "Published (Private)",
                     "agent_environment": "Prod",
                     "agent_intent": f"A2A / Custom Container Agent ({card_name})",
 

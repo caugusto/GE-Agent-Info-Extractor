@@ -418,7 +418,6 @@ def extract_discovery_engine_agents() -> List[Dict[str, Any]]:
                                                         ks_types_list.append(ds_label)
 
                                             state = ag.get("state", "UNKNOWN")
-                                            status = "Enabled" if state == "ENABLED" else "Private" if state == "PRIVATE" else state.title()
 
                                             c_ts = _format_timestamp(ag.get("createTime"))
                                             u_ts = _format_timestamp(ag.get("updateTime"))
@@ -480,6 +479,18 @@ def extract_discovery_engine_agents() -> List[Dict[str, Any]]:
                                             sharing = ag.get("sharingConfig", {})
                                             scope = sharing.get("scope", "RESTRICTED")
                                             is_everyone_reg = (scope == "ALL_USERS")
+
+                                            # Determine Option B consistent agent_status
+                                            state = ag.get("state", "UNKNOWN")
+                                            if state == "DISABLED":
+                                                status = "Disabled"
+                                            elif pub_version and pub_version != "v0.0":
+                                                if is_everyone_reg or is_shared:
+                                                    status = "Published (Enabled)"
+                                                else:
+                                                    status = "Published (Private)"
+                                            else:
+                                                status = "Draft"
 
                                             # Fetch Reasoning Engine / Cloud Run / A2A Deployment & Identity Details
                                             dep_details = _get_deployment_and_identity_details(ag)
