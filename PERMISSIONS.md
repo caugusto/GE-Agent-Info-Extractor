@@ -133,8 +133,37 @@ gcloud iam roles create geAgentExtractorRunner \
     --permissions="bigquery.datasets.get,bigquery.datasets.create,bigquery.tables.get,bigquery.tables.create,bigquery.tables.delete,bigquery.tables.updateData,bigquery.tables.getData,bigquery.jobs.create,discoveryengine.engines.get,discoveryengine.engines.list,discoveryengine.dataStores.get,discoveryengine.dataStores.list,discoveryengine.assistants.get,discoveryengine.assistants.list,discoveryengine.agents.get,discoveryengine.agents.list,discoveryengine.agents.getIamPolicy,aiplatform.reasoningEngines.get,aiplatform.reasoningEngines.list,run.services.get,run.services.list,resourcemanager.projects.get" \
     --stage=GA
 
-# Bind Custom Role to Service Account
-gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SA_EMAIL}" \
-    --role="projects/${PROJECT_ID}/roles/geAgentExtractorRunner"
+---
+
+## 4. Dashboard App IAP & Web Access Roles (`ge-agent-dashboard-app`)
+
+When serving the **Agent Inventory Dashboard App** via Cloud Run secured with **Identity-Aware Proxy (IAP)**, assign these exact IAM roles and bindings:
+
+| Role Name | IAM Role String | Target Resource | Granted Member | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **Cloud Run Invoker** | `roles/run.invoker` | Cloud Run Service (`ge-agent-dashboard-app`) | `domain:<YOUR_DOMAIN>`<br>`serviceAccount:service-<PROJECT_NUMBER>@gcp-sa-iap.iam.gserviceaccount.com` | Allows domain users' browser requests to reach Cloud Run IAP authentication proxy. |
+| **IAP Web Accessor** | `roles/iap.httpsResourceAccessor` | IAP Resource (`iap_web`) | `user:admin@caugusto.altostrat.com` (or authorized user/group) | Grants permission to pass through Google Workspace SSO into the dashboard. |
+| **BigQuery Data Viewer** | `roles/bigquery.dataViewer` | GCP Project / Dataset (`ge_agent_inventory`) | `serviceAccount:<PROJECT_NUMBER>-compute@developer.gserviceaccount.com` | Allows backend FastAPI server to run SQL queries against BigQuery table. |
+
+### CLI Commands to Apply Dashboard IAP IAM Policies
+
+```bash
+# 1. Allow domain users to reach Cloud Run IAP proxy
+gcloud run services add-iam-policy-binding ge-agent-dashboard-app \
+  --member="domain:caugusto.altostrat.com" \
+  --role="roles/run.invoker" \
+  --region us-central1 \
+  --project agentspace-452714
+
+# 2. Grant IAP web access to authorized admin
+gcloud iap web add-iam-policy-binding \
+  --member="user:admin@caugusto.altostrat.com" \
+  --role="roles/iap.httpsResourceAccessor" \
+  --project=agentspace-452714
+
+# 3. Grant BigQuery Data Viewer to Cloud Run runtime service account
+gcloud projects add-iam-policy-binding agentspace-452714 \
+  --member="serviceAccount:16933400417-compute@developer.gserviceaccount.com" \
+  --role="roles/bigquery.dataViewer"
+```
 ```

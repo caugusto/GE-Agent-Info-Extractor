@@ -8,17 +8,66 @@ A bespoke, high-performance **React + FastAPI Web Application** that visualizes 
 
 - **Dashboard App URL**: [`https://ge-agent-dashboard-app-16933400417.us-central1.run.app`](https://ge-agent-dashboard-app-16933400417.us-central1.run.app)
 - **Deployment Region**: `us-central1`
-- **Authentication & Security**: **Direct Cloud Run IAP / Google IAM** (`--no-allow-unauthenticated`). Restricted exclusively to `admin@caugusto.altostrat.com`.
+- **Authentication & Security**: **Direct Cloud Run IAP / Google Workspace SSO** (`--iap`). Restricted exclusively to `admin@caugusto.altostrat.com`.
 
 ---
 
-## 🔐 Restricted Access & Security Model
+## 🔐 Restricted Access, OAuth Consent & Security Model
 
-- **No Public Access**: Public unauthenticated access is strictly disabled.
-- **IAM Authorization**:
-  - `roles/run.invoker` is granted **only to `user:admin@caugusto.altostrat.com`**.
-  - Any unapproved or unauthenticated request is blocked natively by Cloud Run IAM with HTTP 403 Forbidden.
-- **Identity Awareness**: The FastAPI backend inspects `X-Goog-Authenticated-User-Email` headers passed by Google Cloud.
+- **No Public Access**: Public unauthenticated access is strictly disabled. Unauthenticated requests are redirected automatically to Google Workspace SSO (`accounts.google.com`).
+- **Identity Awareness**: The FastAPI backend inspects `X-Goog-Authenticated-User-Email` and `X-Goog-Iap-Jwt-Assertion` headers injected natively by Google Cloud IAP.
+
+---
+
+## 🔒 Step-by-Step IAP & OAuth Consent Configuration
+
+### 1. Configure OAuth Consent Screen (Google Cloud Console)
+Before enabling IAP on Cloud Run, an **OAuth consent screen** must exist in the GCP project:
+1. Open the [Google Cloud Console OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent?project=agentspace-452714).
+2. Select **User Type**: **Internal** (restricts authentication exclusively to users within your Google Workspace organization).
+3. Fill in the required fields:
+   - **App name**: `GE Agent Inventory Dashboard`
+   - **User support email**: `admin@caugusto.altostrat.com`
+   - **Developer contact information**: `admin@caugusto.altostrat.com`
+4. Click **Save and Continue** through the scopes step.
+
+### 2. Enable Direct IAP on Cloud Run Service
+Enable Cloud Run's integrated IAP feature via `gcloud`:
+```bash
+gcloud run services update ge-agent-dashboard-app \
+  --iap \
+  --region us-central1 \
+  --project agentspace-452714
+```
+
+### 3. Configure IAM Roles & Policy Bindings
+
+| Role Name | IAM Role String | Target Resource | Granted Member | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **Cloud Run Invoker** | `roles/run.invoker` | Cloud Run Service | `domain:caugusto.altostrat.com`<br>`serviceAccount:service-16933400417@gcp-sa-iap.iam.gserviceaccount.com` | Allows domain users' browser requests to reach Cloud Run IAP proxy. |
+| **IAP Web Accessor** | `roles/iap.httpsResourceAccessor` | IAP Resource (`iap_web`) | `user:admin@caugusto.altostrat.com` | Grants permission to pass through IAP Google Workspace SSO into the dashboard. |
+| **BigQuery Data Viewer** | `roles/bigquery.dataViewer` | GCP Project / Dataset | `serviceAccount:16933400417-compute@developer.gserviceaccount.com` | Allows backend FastAPI server to execute SQL queries on `ge_agent_inventory.agent_details`. |
+
+#### CLI Commands to Apply IAM Policy Bindings:
+```bash
+# 1. Allow domain users to reach Cloud Run IAP proxy
+gcloud run services add-iam-policy-binding ge-agent-dashboard-app \
+  --member="domain:caugusto.altostrat.com" \
+  --role="roles/run.invoker" \
+  --region us-central1 \
+  --project agentspace-452714
+
+# 2. Grant IAP web access to authorized admin
+gcloud iap web add-iam-policy-binding \
+  --member="user:admin@caugusto.altostrat.com" \
+  --role="roles/iap.httpsResourceAccessor" \
+  --project=agentspace-452714
+
+# 3. Grant BigQuery Data Viewer to Cloud Run runtime service account
+gcloud projects add-iam-policy-binding agentspace-452714 \
+  --member="serviceAccount:16933400417-compute@developer.gserviceaccount.com" \
+  --role="roles/bigquery.dataViewer"
+```
 
 ---
 
@@ -66,11 +115,11 @@ uvicorn app:app --reload --port 8000
 # Build image with Cloud Build
 gcloud builds submit dashboard_app --tag gcr.io/agentspace-452714/ge-agent-dashboard-app:latest --project agentspace-452714
 
-# Deploy to Cloud Run
+# Deploy to Cloud Run with IAP
 gcloud run deploy ge-agent-dashboard-app \
   --image gcr.io/agentspace-452714/ge-agent-dashboard-app:latest \
   --region us-central1 \
   --project agentspace-452714 \
-  --no-allow-unauthenticated \
+  --iap \
   --set-env-vars GCP_PROJECT_ID=agentspace-452714,BQ_DATASET_ID=ge_agent_inventory,BQ_TABLE_ID=agent_details
 ```
