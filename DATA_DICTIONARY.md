@@ -59,15 +59,15 @@ This document details every column in the BigQuery table `ge_agent_inventory.age
 
 > [!NOTE]
 > **Applicability Scope across Agent Types:**
-> - **Gemini Enterprise Registered Agents** (`Agent Designer`, registered `Agent Runtime`, `Dialogflow`, `Workflow Agent`, `Google Built-in Agent`, `Cloud Run (A2A)`, `App Engine`): Extracted from Discovery Engine IAM policies (`getIamPolicy`).
+> - **Gemini Enterprise Registered Agents** (`Agent Designer`, registered `Agent Runtime`, `Dialogflow`, `Workflow Agent`, `Google Built-in Agent`, `Cloud Run (A2A)`, `App Engine`): Extracted from Discovery Engine `sharingConfig` (`scope: ALL_USERS | DOMAIN | RESTRICTED`, `sharedUsers`) and IAM policies (`getIamPolicy`).
 > - **Standalone Agent Runtime (Reasoning Engines)**: Extracted from Vertex AI Reasoning Engine IAM policies (`aiplatform.reasoningEngines.getIamPolicy`).
 > - **Standalone Cloud Run (A2A)**: Extracted from Cloud Run service IAM policies (`run.services.getIamPolicy`).
 
 | Column Name | BigQuery Data Type | Logic & Extraction Source | Possible Values | When Value Occurs |
 | :--- | :--- | :--- | :--- | :--- |
-| `is_shared` | `BOOLEAN` | True if agent has IAM sharing bindings with users/groups. | `TRUE`, `FALSE` | Set to `TRUE` if `getIamPolicy` returns user/group bindings beyond the owner. |
-| `shared_with_users` | `ARRAY<STRING>` | List of user email addresses with access to the agent. | Array of emails (e.g. `["user1@domain.com", "user2@domain.com"]`) | Extracted from IAM policy bindings (`roles/discoveryengine.agentUser`, `roles/discoveryengine.agentViewer`). |
-| `permission_roles` | `ARRAY<STRING>` | Detailed membership and role mapping strings. | Array of formatted strings (e.g. `["user@domain.com (Agent User)", "group@domain.com (Agent Owner)"]`) | Formatted representation of IAM policy bindings returned by `getIamPolicy`. |
+| `is_shared` | `BOOLEAN` | True if agent has enterprise-wide sharing (`scope: ALL_USERS`/`DOMAIN`), explicit shared users in `sharingConfig`, or IAM permissions for users/groups. | `TRUE`, `FALSE` | Set to `TRUE` if `sharingConfig` scope is `ALL_USERS`/`DOMAIN`, `sharedUsers` is populated, or `getIamPolicy` returns non-owner bindings. |
+| `shared_with_users` | `ARRAY<STRING>` | List of user email addresses or group markers with access to the agent. | Array of strings (e.g. `["All users"]`, `["user1@domain.com"]`) | Contains `["All users"]` for enterprise-wide agents, or explicit email addresses for restricted shared agents. |
+| `permission_roles` | `ARRAY<STRING>` | Detailed membership and role mapping strings. | Array of formatted strings (e.g. `["All users (Agent User)"]`, `["user@domain.com (Agent User)", "admin@domain.com (Agent Owner)"]`) | Formatted representation of `sharingConfig` and IAM policy bindings returned by `getIamPolicy`. |
 
 ---
 
@@ -103,15 +103,15 @@ This document details every column in the BigQuery table `ge_agent_inventory.age
 
 > [!NOTE]
 > **Applicability Scope across Agent Types:**
-> - **Gemini Enterprise Apps (`App Engine`) & Registered Agents**: Evaluated directly from Discovery Engine `appType` (`APP_TYPE_INTRANET` -> `Enterprise` scope) and Gemini Enterprise IAM sharing policies.
+> - **Gemini Enterprise Apps (`App Engine`) & Registered Agents**: Evaluated directly from Discovery Engine `sharingConfig` (`scope: ALL_USERS` | `DOMAIN`) and IAM policies.
 > - **Standalone Runtimes (`Agent Runtime`, `Cloud Run (A2A)`)**: Default to `access_scope = Group` / `Private` and `is_available_to_everyone = FALSE` unless public unauthenticated access (`allUsers`) is configured in GCP IAM.
 
 | Column Name | BigQuery Data Type | Logic & Extraction Source | Possible Values | When Value Occurs |
 | :--- | :--- | :--- | :--- | :--- |
-| `is_available_to_everyone` | `BOOLEAN` | True if accessible enterprise-wide. | `TRUE`, `FALSE` | True if `appType == "APP_TYPE_INTRANET"` or public sharing is enabled. |
-| `access_scope` | `STRING` | Visibility tier. | `Enterprise`, `Group`, `Private` | Inferred from app type and sharing bindings. |
-| `audience_size` | `STRING` | Target user base scale. | `Enterprise`, `Restricted` | `Enterprise` for intranet apps; `Restricted` for private/group agents. |
-| `target_audience_details` | `STRING` | Description of intended audience. | Text string (e.g. `Enterprise Users with Gemini Enterprise License`) | Summary of target users or group access. |
+| `is_available_to_everyone` | `BOOLEAN` | True if accessible enterprise-wide to all users or domain members. | `TRUE`, `FALSE` | Set to `TRUE` if `sharingConfig` scope is `ALL_USERS` or `DOMAIN` or if public IAM access is enabled. |
+| `access_scope` | `STRING` | Visibility tier. | • `Enterprise`<br>• `Shared Users`<br>• `Private` | Inferred from `sharingConfig` scope and IAM bindings. |
+| `audience_size` | `STRING` | Target user base scale. | • `Enterprise Wide`<br>• `Shared Users`<br>• `Restricted` | `Enterprise Wide` for all-user agents; `Shared Users` for specific user sharing; `Restricted` for private agents. |
+| `target_audience_details` | `STRING` | Description of intended audience. | Text string (e.g. `Enterprise Users with Gemini Enterprise License`, `user@domain.com`, `Owner Only`) | Detailed text summary of target users or group access. |
 
 ---
 
