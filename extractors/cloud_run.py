@@ -147,9 +147,9 @@ def extract_cloud_run_agents() -> List[Dict[str, Any]]:
                     "agent_intent": f"A2A / Custom Container Agent ({card_name})",
 
                     # Sharing
-                    "is_shared": False,
-                    "shared_with_users": [],
-                    "permission_roles": [f"{last_deployed_by} (Agent Owner)"],
+                    "is_shared": is_public,
+                    "shared_with_users": ["All users"] if is_public else [],
+                    "permission_roles": [f"{last_deployed_by} (Agent Owner)", "All users (run.routesInvoker)"] if is_public else [f"{last_deployed_by} (Agent Owner)"],
 
                     # Config
                     "uses_knowledge_sources": False,
@@ -170,10 +170,10 @@ def extract_cloud_run_agents() -> List[Dict[str, Any]]:
                     "authentication_method": "Cloud Run IAM / OIDC Token",
 
                     # Access Scope
-                    "is_available_to_everyone": False,
-                    "access_scope": "Group",
-                    "audience_size": "Authorized Invokers",
-                    "target_audience_details": "IAM Principals with roles/run.routesInvoker",
+                    "is_available_to_everyone": is_public,
+                    "access_scope": "Public / Organization" if is_public else "Group",
+                    "audience_size": "All Users" if is_public else "Authorized Invokers",
+                    "target_audience_details": "Unauthenticated / All Users" if is_public else "IAM Principals with roles/run.routesInvoker",
 
                     # Reasoning Engine Nulls
                     "reasoning_engine_id": None,

@@ -478,7 +478,29 @@ def extract_discovery_engine_agents() -> List[Dict[str, Any]]:
 
                                             sharing = ag.get("sharingConfig", {})
                                             scope = sharing.get("scope", "RESTRICTED")
-                                            is_everyone_reg = (scope == "ALL_USERS")
+                                            is_everyone_reg = (scope in ("ALL_USERS", "DOMAIN"))
+
+                                            if scope == "ALL_USERS":
+                                                is_shared = True
+                                                if "All users" not in shared_with_users:
+                                                    shared_with_users.append("All users")
+                                                if "All users (Agent User)" not in permission_roles:
+                                                    permission_roles.append("All users (Agent User)")
+                                            elif scope == "DOMAIN":
+                                                is_shared = True
+                                                if "Domain users" not in shared_with_users:
+                                                    shared_with_users.append("Domain users")
+                                                if "Domain users (Agent User)" not in permission_roles:
+                                                    permission_roles.append("Domain users (Agent User)")
+
+                                            for su in sharing.get("sharedUsers", []):
+                                                clean_su = su.replace("user:", "").replace("group:", "").replace("serviceAccount:", "")
+                                                if clean_su:
+                                                    is_shared = True
+                                                    if clean_su not in shared_with_users:
+                                                        shared_with_users.append(clean_su)
+                                                    if f"{clean_su} (Agent User)" not in permission_roles:
+                                                        permission_roles.append(f"{clean_su} (Agent User)")
 
                                             # Determine Option B consistent agent_status
                                             state = ag.get("state", "UNKNOWN")
@@ -535,9 +557,9 @@ def extract_discovery_engine_agents() -> List[Dict[str, Any]]:
                                                 "authentication_method": "Google Workspace / Cloud Identity SSO",
 
                                                 "is_available_to_everyone": is_everyone_reg,
-                                                "access_scope": "Enterprise" if is_everyone_reg else "Group / Private",
-                                                "audience_size": "Enterprise" if is_everyone_reg else "Restricted",
-                                                "target_audience_details": "Enterprise Users with Gemini Enterprise License" if is_everyone_reg else "Owner / Shared Users",
+                                                "access_scope": "Enterprise" if is_everyone_reg else ("Shared Users" if is_shared else "Private"),
+                                                "audience_size": "Enterprise Wide" if is_everyone_reg else ("Shared Users" if is_shared else "Restricted"),
+                                                "target_audience_details": "Enterprise Users with Gemini Enterprise License" if is_everyone_reg else (", ".join(shared_with_users) if shared_with_users else "Owner Only"),
 
                                                 # Deployment & Identity Details
                                                 **dep_details,
