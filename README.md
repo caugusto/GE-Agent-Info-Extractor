@@ -60,17 +60,53 @@ The target BigQuery dataset, table, GCP Project, and scan regions can be configu
 
 ---
 
+## 🚀 Prerequisites & Local Execution
+
+### 1. Required GCP APIs
+Ensure the following Google Cloud APIs are enabled in your project:
+- **Discovery Engine API**: `discoveryengine.googleapis.com`
+- **Vertex AI API**: `aiplatform.googleapis.com`
+- **Cloud Run API**: `run.googleapis.com`
+- **BigQuery API**: `bigquery.googleapis.com`
+- **IAM Credentials API**: `iamcredentials.googleapis.com`
+
+```bash
+gcloud services enable \
+    discoveryengine.googleapis.com \
+    aiplatform.googleapis.com \
+    run.googleapis.com \
+    bigquery.googleapis.com \
+    iamcredentials.googleapis.com \
+    --project=agentspace-452714
+```
+
+### 2. Required GCP IAM Roles
+Your authenticated GCP user or service account requires the following roles at the project level:
+- **BigQuery Data Editor** (`roles/bigquery.dataEditor`): Create/update dataset & table, insert records.
+- **BigQuery Job User** (`roles/bigquery.jobUser`): Execute BigQuery queries for incremental `collection_id` checks.
+- **Discovery Engine Viewer** (`roles/discoveryengine.viewer`): Read Gemini Enterprise / Agent Designer agents & controls.
+- **Vertex AI Viewer** (`roles/aiplatform.viewer`): List and inspect Agent Platform Reasoning Engine code agents.
+- **Cloud Run Viewer** (`roles/run.viewer`): List Cloud Run agent services and query service metadata.
+
+For fine-grained custom IAM permissions, see **[PERMISSIONS.md](PERMISSIONS.md)**.
+
+---
+
 ## 🚀 Quick Start & CLI Options (`main.py`)
 
 ```bash
-# 1. Activate virtual environment
+# 1. Create and activate virtual environment
+python3 -m venv .venv
 source .venv/bin/activate
 
-# 2. Authenticate
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Authenticate with Google Cloud
 gcloud auth application-default login
 gcloud config set project agentspace-452714
 
-# 3. Execute extraction and load to default BigQuery dataset/table
+# 4. Execute extraction and load to default BigQuery dataset/table
 python3 main.py
 ```
 
