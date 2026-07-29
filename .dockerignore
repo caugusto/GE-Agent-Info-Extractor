@@ -8,3 +8,4 @@ __pycache__
 scratch
 *.csv
 .DS_Store
+dashboard_app/
