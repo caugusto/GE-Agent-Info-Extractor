@@ -117,6 +117,17 @@ def extract_cloud_run_agents() -> List[Dict[str, Any]]:
                     skills = []
                     tool_types = ["Cloud Run Container Service"]
 
+                # Check IAM policy for allUsers or allAuthenticatedUsers
+                is_public = False
+                try:
+                    iam_policy = client.get_iam_policy(resource=svc_name)
+                    for b in getattr(iam_policy, "bindings", []):
+                        if "allUsers" in getattr(b, "members", []) or "allAuthenticatedUsers" in getattr(b, "members", []):
+                            is_public = True
+                            break
+                except Exception as iam_err:
+                    logger.debug(f"Could not check IAM policy for Cloud Run service {svc_name}: {iam_err}")
+
                 agent_record = {
                     "gemini_enterprise_instance_name": "N/A (Standalone Cloud Run)",
                     "gemini_enterprise_instance_id": "N/A",
