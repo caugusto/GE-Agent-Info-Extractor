@@ -12,6 +12,7 @@ from bigquery_schema import ensure_dataset_and_table
 from extractors.discovery_engine import extract_discovery_engine_agents
 from extractors.vertex_reasoning_engine import extract_vertex_reasoning_engines
 from extractors.cloud_run import extract_cloud_run_agents
+from extractors.gke import extract_gke_agents
 
 logging.basicConfig(
     level=logging.INFO,
@@ -196,6 +197,18 @@ def run_inventory_extraction(dataset_name: str = DEFAULT_BQ_DATASET, table_name:
                 if cr_url == target_url or (cr_svc and cr_svc.lower() in target_url.lower()):
                     _enrich_registered_agent(de_ag, cr_ag)
             logger.info(f"Skipping duplicate standalone Cloud Run service '{cr_ag.get('agent_name')}' ({cr_url}) and enriched existing registered agent record with Cloud Run deployment metadata.")
+
+    logger.info("Extracting GKE Cluster Agent Services...")
+    gke_agents = extract_gke_agents()
+    for gke_ag in gke_agents:
+        gke_url = gke_ag.get("a2a_agent_url") or gke_ag.get("agent_id")
+        if gke_url not in registered_cr_urls:
+            all_agents.append(gke_ag)
+        else:
+            for de_ag in de_agents:
+                if de_ag.get("a2a_agent_url") == gke_url:
+                    _enrich_registered_agent(de_ag, gke_ag)
+            logger.info(f"Skipping duplicate standalone GKE agent service '{gke_ag.get('agent_name')}' ({gke_url}) and enriched existing registered agent record.")
 
     logger.info(f"Total Agents Extracted: {len(all_agents)}")
 

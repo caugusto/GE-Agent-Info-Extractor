@@ -36,3 +36,6 @@ VERTEX_AI_LOCATIONS = ["us-central1", "us-east1", "us-west1", "europe-west1"]
 
 # Cloud Run regions
 CLOUD_RUN_REGIONS = ["us-central1", "us-east1", "us-west1"]
+
+# GKE cluster locations to scan
+GKE_LOCATIONS = ["us-central1", "us-east1", "us-west1", "europe-west1"]

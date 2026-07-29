@@ -57,6 +57,7 @@ gcloud services enable \
     artifactregistry.googleapis.com \
     discoveryengine.googleapis.com \
     aiplatform.googleapis.com \
+    container.googleapis.com \
     bigquery.googleapis.com \
     --project="${GCP_PROJECT}"
 ```
@@ -75,6 +76,7 @@ for ROLE in \
     "roles/discoveryengine.admin" \
     "roles/aiplatform.viewer" \
     "roles/run.viewer" \
+    "roles/container.viewer" \
     "roles/run.invoker"; do
   gcloud projects add-iam-policy-binding "${GCP_PROJECT}" \
       --member="serviceAccount:${SA_EMAIL}" \

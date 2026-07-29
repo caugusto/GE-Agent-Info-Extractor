@@ -18,6 +18,7 @@ A Python application that extracts inventory data for all AI agents across Googl
   - **Gemini Enterprise (Agent Designer)**: Queries Discovery Engine engines, data stores, controls, registered agents, and system instructions across all locations.
   - **Agent Platform Engine**: Queries Reasoning Engines, python spec, tools, runtime endpoints, and identity.
   - **Cloud Run Agent Services**: Queries container services and A2A (`/.well-known/agent-card.json`) endpoints.
+  - **GKE Cluster Agent Services**: Queries Kubernetes Engine clusters for exposed container endpoints serving valid A2A Agent Cards.
 - **Incremental Run Tracking**: Every run assigns an incremental `collection_id` (`INT64`, e.g. `1`, `2`, `3`) and `collection_timestamp`. Standard SQL `MAX(collection_id)` can be used to query the latest snapshot.
 - **Explicit BigQuery Schema**: Strongly-typed columns for agent features, permissions, sharing, deployment details, and runtime identities.
 - **Automated Partitioning**: Table is partitioned by `collection_timestamp`.
@@ -34,7 +35,8 @@ ge_agent_extractor/
 │   ├── __init__.py
 │   ├── discovery_engine.py        # Gemini Enterprise / Agent Designer extractor
 │   ├── vertex_reasoning_engine.py # Agent Platform Engine code agent extractor
-│   └── cloud_run.py               # Cloud Run & A2A agent service extractor
+│   ├── cloud_run.py               # Cloud Run & A2A agent service extractor
+│   └── gke.py                     # GKE cluster A2A agent service extractor
 ├── main.py                        # Main orchestration entrypoint
 ├── EXTRACTION_ARCHITECTURE.md     # Pipeline execution flow & in-place record enrichment design
 ├── DATA_DICTIONARY.md             # Complete BigQuery data dictionary & extraction rules
@@ -70,6 +72,7 @@ Ensure the following Google Cloud APIs are enabled in your project:
 - **Discovery Engine API**: `discoveryengine.googleapis.com`
 - **Vertex AI API**: `aiplatform.googleapis.com`
 - **Cloud Run API**: `run.googleapis.com`
+- **Kubernetes Engine API**: `container.googleapis.com`
 - **BigQuery API**: `bigquery.googleapis.com`
 - **IAM Credentials API**: `iamcredentials.googleapis.com`
 
@@ -81,13 +84,14 @@ gcloud services enable \
     discoveryengine.googleapis.com \
     aiplatform.googleapis.com \
     run.googleapis.com \
+    container.googleapis.com \
     bigquery.googleapis.com \
     iamcredentials.googleapis.com \
     --project="${GCP_PROJECT}"
 ```
 
 ### 2. Required GCP IAM Roles
-For quick setup or developer environments, assigning the single **Editor** role (`roles/editor`) at the project level covers all required operations across BigQuery, Discovery Engine, Vertex AI, and Cloud Run.
+For quick setup or developer environments, assigning the single **Editor** role (`roles/editor`) at the project level covers all required operations across BigQuery, Discovery Engine, Vertex AI, Cloud Run, and GKE.
 
 Alternatively, for a granular least-privilege setup, assign the following standard roles:
 - **BigQuery Data Editor** (`roles/bigquery.dataEditor`): Create/update dataset & table, insert records.
@@ -95,6 +99,7 @@ Alternatively, for a granular least-privilege setup, assign the following standa
 - **Discovery Engine Viewer** (`roles/discoveryengine.viewer`): Read Gemini Enterprise / Agent Designer agents & controls.
 - **Vertex AI Viewer** (`roles/aiplatform.viewer`): List and inspect Agent Platform Reasoning Engine code agents.
 - **Cloud Run Viewer** (`roles/run.viewer`): List Cloud Run agent services and query service metadata.
+- **Kubernetes Engine Viewer** (`roles/container.viewer`): List GKE clusters and inspect service endpoints.
 
 For fine-grained custom IAM permissions, see **[PERMISSIONS.md](PERMISSIONS.md)**.
 
