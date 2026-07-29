@@ -54,9 +54,12 @@ The target BigQuery dataset, table, GCP Project, and scan regions can be configu
 | :--- | :--- | :--- | :--- | :--- |
 | **Dataset Name** | `DEFAULT_BQ_DATASET` | `BQ_DATASET` | `ge_agent_inventory` | Target BigQuery dataset |
 | **Table Name** | `DEFAULT_BQ_TABLE` | `BQ_TABLE` | `agent_details` | Target BigQuery table |
-| **GCP Project** | `PROJECT_ID` | `GCP_PROJECT` | `agentspace-452714` | Target GCP project |
+| **GCP Project** | `PROJECT_ID` | `GCP_PROJECT` | `agentspace-452714` | Target GCP project ID |
 | **BigQuery Location** | `BQ_LOCATION` | `BQ_LOCATION` | `US` | BigQuery dataset location |
-| **CSV Output** | `DEFAULT_CSV_OUTPUT` | `CSV_OUTPUT` | `agent_inventory_dry_run.csv` | Output file for dry-run mode |
+| **CSV Output** | `DEFAULT_CSV_OUTPUT` | `CSV_OUTPUT` | `agent_inventory_dry_run.csv` | Output CSV file path for dry-run mode |
+| **Default Region** | `REGION` | `REGION` | `us-central1` | Default GCP region for Cloud Run Job & Scheduler |
+| **Service Account Name** | `SA_NAME` | `SA_NAME` | `sa-ge-agent-extractor` | Name for dedicated deployment Service Account |
+| **Service Account Email** | `SA_EMAIL` | Derived | `${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com` | Service account email address |
 
 ---
 
