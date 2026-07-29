@@ -141,15 +141,15 @@ def get_summary_stats(collection_id: Optional[int] = Query(None)):
         query = f"""
         SELECT 
             COUNT(*) as total_agents,
-            COUNTIF(is_shared = TRUE) as total_shared,
-            COUNTIF(is_available_to_everyone = TRUE) as total_enterprise_wide,
-            COUNTIF(is_shared = TRUE AND is_available_to_everyone = FALSE) as total_restricted_shared,
-            COUNTIF(is_shared = FALSE) as total_private,
+            COUNTIF(is_shared IS TRUE) as total_shared,
+            COUNTIF(is_available_to_everyone IS TRUE) as total_enterprise_wide,
+            COUNTIF(is_shared IS TRUE AND (is_available_to_everyone IS FALSE OR is_available_to_everyone IS NULL)) as total_restricted_shared,
+            COUNTIF(is_shared IS FALSE OR is_shared IS NULL) as total_private,
             
-            COUNTIF(uses_knowledge_sources = TRUE OR uses_rag = TRUE) as uses_rag_count,
-            COUNTIF(uses_mcp = TRUE) as uses_mcp_count,
-            COUNTIF(uses_tools = TRUE) as uses_tools_count,
-            COUNTIF(uses_code_execution = TRUE) as uses_code_count,
+            COUNTIF(uses_knowledge_sources IS TRUE OR uses_rag IS TRUE) as uses_rag_count,
+            COUNTIF(uses_mcp IS TRUE) as uses_mcp_count,
+            COUNTIF(uses_tools IS TRUE) as uses_tools_count,
+            COUNTIF(uses_code_execution IS TRUE) as uses_code_count,
             
             COUNTIF(agent_platform LIKE '%Agent Designer%') as count_agent_designer,
             COUNTIF(agent_platform LIKE '%Agent Runtime%' OR agent_platform LIKE '%Reasoning Engine%') as count_agent_runtime,
