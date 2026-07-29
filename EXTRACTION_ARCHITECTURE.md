@@ -6,21 +6,22 @@ This document details the multi-stage execution pipeline, deduplication strategy
 
 ## 🏗️ Multi-Stage Execution Pipeline
 
-The extractor operates in a strict, synchronous 5-stage pipeline to guarantee data completeness and avoid duplicate rows in BigQuery.
+The extractor operates in a strict, synchronous 6-stage pipeline to guarantee data completeness and avoid duplicate rows in BigQuery.
 
 ```mermaid
 graph TD
-    A["Stage 1: Discovery Engine / Gemini Enterprise Extractor<br><i>(Scans all instances, assistants & registered agents)</i>"] --> B["Stage 2: Index Construction<br><i>(Collects all registered Reasoning Engine IDs & Cloud Run URLs)</i>"]
+    A["Stage 1: Discovery Engine / Gemini Enterprise Extractor<br><i>(Scans all instances, assistants & registered agents)</i>"] --> B["Stage 2: Index Construction<br><i>(Collects all registered Reasoning Engine IDs & Cloud Run/A2A URLs)</i>"]
     B --> C["Stage 3: Vertex AI Reasoning Engines Extractor<br><i>(Scans standalone engines & performs in-place enrichment)</i>"]
     C --> D["Stage 4: Cloud Run Services Extractor<br><i>(Scans Cloud Run services & performs in-place enrichment)</i>"]
-    D --> E["Stage 5: BigQuery Ingestion"]
+    D --> E["Stage 5: GKE Cluster Services Extractor<br><i>(Scans GKE clusters & performs in-place enrichment)</i>"]
+    E --> F["Stage 6: BigQuery Ingestion"]
 ```
 
 ---
 
 ## 🔄 Execution Order & Guaranteed Reading Sequence
 
-It is **guaranteed** that the extractor reads all Gemini Enterprise instances and their registered agents **prior** to inspecting standalone Vertex AI Reasoning Engines or Cloud Run services:
+It is **guaranteed** that the extractor reads all Gemini Enterprise instances and their registered agents **prior** to inspecting standalone Vertex AI Reasoning Engines, Cloud Run services, or GKE cluster endpoints:
 
 1. **Stage 1 — Discovery Engine Scanning (`extract_discovery_engine_agents`)**:
    - Queries Discovery Engine across all supported locations (`global`, `us`, `eu`).
@@ -31,7 +32,7 @@ It is **guaranteed** that the extractor reads all Gemini Enterprise instances an
    - Iterates through the baseline records from Stage 1 (`de_agents`).
    - Builds in-memory lookup sets:
      - `registered_re_ids`: Resource paths of Reasoning Engines registered under Gemini Enterprise (e.g. `projects/.../reasoningEngines/...`).
-     - `registered_cr_urls`: Endpoint URLs of A2A / Cloud Run services registered under Gemini Enterprise.
+     - `registered_cr_urls`: Endpoint URLs of A2A / Cloud Run / GKE services registered under Gemini Enterprise.
 
 3. **Stage 3 — Vertex AI Reasoning Engine Extraction & In-Place Enrichment**:
    - Queries Vertex AI Reasoning Engines (`aiplatform.reasoningEngines`) across all configured GCP regions (`us-central1`, `us-east1`, `us-west1`, `europe-west1`, etc.).
@@ -45,7 +46,13 @@ It is **guaranteed** that the extractor reads all Gemini Enterprise instances an
      - **If registered in Gemini Enterprise**: The standalone Cloud Run service is skipped, and container metadata (`cloud_run_image`, `cloud_run_region`, `cloud_run_service_account`, `a2a_skills`, etc.) is merged **in-place** into the registered agent record.
      - **If NOT registered in Gemini Enterprise**: The service is appended as a new standalone `Cloud Run (A2A)` record.
 
-5. **Stage 5 — BigQuery Ingestion**:
+5. **Stage 5 — GKE Cluster Services Extraction & In-Place Enrichment**:
+   - Queries GKE clusters (`container.clusters`) and inspects exposed endpoints for valid A2A cards (`/.well-known/agent-card.json`).
+   - **Enrichment & Deduplication Logic**:
+     - **If registered in Gemini Enterprise**: The GKE service is skipped, and cluster metadata (`a2a_skills`, `a2a_agent_url`, etc.) is merged **in-place** into the registered agent record.
+     - **If NOT registered in Gemini Enterprise**: The service is appended as a new standalone `GKE (A2A)` record.
+
+6. **Stage 6 — BigQuery Ingestion**:
    - Assigns an incremental `collection_id` (`INT64`, e.g., `1`, `2`, `3`) and `collection_timestamp`.
    - Performs a schema-validated batch load (`load_table_from_json`) into `ge_agent_inventory.agent_details`.
 
@@ -54,5 +61,5 @@ It is **guaranteed** that the extractor reads all Gemini Enterprise instances an
 ## 🎯 Benefits of In-Place Record Enrichment
 
 - **Single Source of Truth**: Agents deployed into Gemini Enterprise instances retain their enterprise context (instance name, sharing policy, author email) while acquiring deep code/container execution details.
-- **Zero Duplicate Rows**: Standalone Reasoning Engines and Cloud Run services that back registered Gemini Enterprise agents are deduplicated without losing technical metadata.
-- **Complete Feature Flags**: Fields such as `python_version`, `pickle_object_gcs_uri`, `cloud_run_image`, and runtime service accounts are populated across both registered and standalone agents.
+- **Zero Duplicate Rows**: Standalone Reasoning Engines, Cloud Run services, and GKE cluster endpoints that back registered Gemini Enterprise agents are deduplicated without losing technical metadata.
+- **Complete Feature Flags**: Fields such as `python_version`, `pickle_object_gcs_uri`, `cloud_run_image`, `a2a_skills`, and runtime service accounts are populated across both registered and standalone agents.
