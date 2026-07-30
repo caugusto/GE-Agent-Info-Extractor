@@ -34,11 +34,11 @@ Alternatively, for a restricted least-privilege setup, assign the following gran
 
 ---
 
-## 2. Service Account Execution (Cloud Run / Cloud Scheduler)
+## 2. Service Account Execution (Cloud Run Extractor & Dashboard)
 
-When deployed as a containerized job on **Cloud Run** (or triggered via **Cloud Scheduler**), assign a dedicated Service Account (e.g. `sa-ge-agent-extractor@<GCP_PROJECT>.iam.gserviceaccount.com`) with minimum required permissions.
+When deployed as a containerized job/service on **Cloud Run** (or triggered via **Cloud Scheduler**), assign a dedicated Service Account (`sa-ge-agent-extractor@<PROJECT_ID>.iam.gserviceaccount.com`) with minimum required permissions.
 
-### A. Assigning Standard Roles to the Service Account
+### Assigning Standard Roles to the Service Account
 Using `gcloud`:
 
 ```bash
@@ -49,7 +49,7 @@ export SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # 1. Create Service Account
 gcloud iam service-accounts create ${SA_NAME} \
-    --display-name="GE Agent Extractor Cloud Run Service Account" \
+    --display-name="GE Agent Extractor & Dashboard Service Account" \
     --project=${PROJECT_ID}
 
 # 2. Grant BigQuery Data Editor & Job User
@@ -138,13 +138,14 @@ gcloud iam roles create geAgentExtractorRunner \
 
 ## 4. Dashboard App IAP & Web Access Roles (`ge-agent-dashboard-app`)
 
-When serving the **Agent Inventory Dashboard App** via Cloud Run secured with **Identity-Aware Proxy (IAP)**, assign these exact IAM roles and bindings:
+When serving the **Agent Inventory Dashboard App** via Cloud Run secured with **Identity-Aware Proxy (IAP)** and executing under the dedicated service account (`sa-ge-agent-extractor@${PROJECT_ID}.iam.gserviceaccount.com`), assign these exact IAM roles:
 
 | Role Name | IAM Role String | Target Resource | Granted Member | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
 | **Cloud Run Invoker** | `roles/run.invoker` | Cloud Run Service (`ge-agent-dashboard-app`) | `domain:${DOMAIN}` | Allows Google Workspace domain users' browser requests to reach Cloud Run IAP proxy. |
 | **IAP Web Accessor** | `roles/iap.httpsResourceAccessor` | IAP Resource (`iap_web`) | `user:${USER_EMAIL}`<br>`group:${GROUP_EMAIL}`<br>`domain:${DOMAIN}` | Grants permission to pass through Google Workspace SSO into the dashboard. |
-| **BigQuery Data Viewer** | `roles/bigquery.dataViewer` | GCP Project / Dataset (`ge_agent_inventory`) | `serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com` | Allows backend FastAPI server to run SQL queries against BigQuery table. |
+| **BigQuery Data Viewer** | `roles/bigquery.dataViewer` | GCP Project / Dataset (`ge_agent_inventory`) | `serviceAccount:${SA_EMAIL}` | Allows backend FastAPI server to run SQL queries against BigQuery table. |
+| **BigQuery Job User** | `roles/bigquery.jobUser` | GCP Project | `serviceAccount:${SA_EMAIL}` | Allows backend FastAPI server to execute query jobs in BigQuery. |
 
 ### Parameterized CLI Commands to Apply Dashboard IAM Policies
 
@@ -153,10 +154,8 @@ export PROJECT_ID="your-gcp-project-id"
 export REGION="us-central1"
 export DOMAIN="yourcompany.com"
 export ADMIN_EMAIL="admin@yourcompany.com"
-
-# Fetch project number and compute service account
-PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
-COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+export SA_NAME="sa-ge-agent-extractor"
+export SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # 1. Allow domain users to reach Cloud Run IAP proxy
 gcloud run services add-iam-policy-binding ge-agent-dashboard-app \
@@ -171,10 +170,14 @@ gcloud iap web add-iam-policy-binding \
   --role="roles/iap.httpsResourceAccessor" \
   --project="${PROJECT_ID}"
 
-# 3. Grant BigQuery Data Viewer to Cloud Run runtime service account
+# 3. Grant BigQuery Data Viewer & Job User to dedicated Service Account
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${COMPUTE_SA}" \
+  --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/bigquery.dataViewer"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/bigquery.jobUser"
 ```
 
 ---

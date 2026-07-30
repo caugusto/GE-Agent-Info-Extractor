@@ -37,24 +37,27 @@ A bespoke, high-performance **React + FastAPI Web Application** that visualizes 
 ## 🔐 Security & Access Control Model
 
 - **Identity-Aware Proxy (IAP)**: Public unauthenticated access is strictly disabled. All incoming web requests are intercepted by Google Cloud IAP and authenticated via Google Workspace OAuth2 SSO (`accounts.google.com`).
+- **Dedicated Service Account Execution**: The Cloud Run backend container executes using the dedicated extractor service account (`sa-ge-agent-extractor@${PROJECT_ID}.iam.gserviceaccount.com`), following the Principle of Least Privilege.
 - **Header Injection & Inspection**: FastAPI backend inspects `X-Goog-Authenticated-User-Email` and `X-Goog-Iap-Jwt-Assertion` headers injected natively by Google Cloud IAP to enforce authorized identity access.
 
 ---
 
 ## 🚀 Step-by-Step Deployment Guide for ANY GCP Project
 
-Follow these steps to deploy the Dashboard App into a new Google Cloud project from scratch.
+Follow these steps to deploy the Dashboard App into a new Google Cloud project from scratch using the dedicated Service Account.
 
 ### 1. Define Deployment Environment Variables
-Set shell variables for your GCP project, deployment region, domain, initial admin email, and BigQuery target dataset/table:
+Set shell variables for your GCP project, deployment region, domain, initial admin email, dedicated service account, and BigQuery target dataset/table:
 
 ```bash
-export PROJECT_ID="your-gcp-project-id"     # e.g., my-company-agents
-export REGION="us-central1"                  # e.g., us-central1
-export DOMAIN="yourcompany.com"              # e.g., mycompany.com
-export ADMIN_EMAIL="admin@yourcompany.com"   # e.g., admin@mycompany.com
-export BQ_DATASET_ID="ge_agent_inventory"    # e.g., ge_agent_inventory
-export BQ_TABLE_ID="agent_details"           # e.g., agent_details
+export PROJECT_ID="your-gcp-project-id"        # e.g., my-company-agents
+export REGION="us-central1"                     # e.g., us-central1
+export DOMAIN="yourcompany.com"                 # e.g., mycompany.com
+export ADMIN_EMAIL="admin@yourcompany.com"      # e.g., admin@mycompany.com
+export SA_NAME="sa-ge-agent-extractor"          # Dedicated service account name
+export SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+export BQ_DATASET_ID="ge_agent_inventory"       # e.g., ge_agent_inventory
+export BQ_TABLE_ID="agent_details"              # e.g., agent_details
 ```
 
 ### 2. Enable Required Google Cloud APIs
@@ -67,7 +70,26 @@ gcloud services enable \
   --project="${PROJECT_ID}"
 ```
 
-### 3. Configure OAuth Consent Screen (GCP Console)
+### 3. Create Dedicated Service Account & Grant BigQuery Permissions
+If not already created by the extractor setup, create the service account and grant required BigQuery roles:
+
+```bash
+# A. Create dedicated Service Account (if not exists)
+gcloud iam service-accounts create "${SA_NAME}" \
+  --display-name="GE Agent Extractor & Dashboard Service Account" \
+  --project="${PROJECT_ID}" || true
+
+# B. Grant BigQuery Data Viewer & Job User permissions
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/bigquery.dataViewer"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/bigquery.jobUser"
+```
+
+### 4. Configure OAuth Consent Screen (GCP Console)
 Before enabling IAP on Cloud Run, an **OAuth consent screen** must be configured once per GCP project:
 1. Open [Google Cloud Console OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent) for your project.
 2. Select **User Type**: **Internal** (restricts authentication exclusively to users within your Google Workspace organization).
@@ -79,14 +101,14 @@ Before enabling IAP on Cloud Run, an **OAuth consent screen** must be configured
 
 ---
 
-### 4. Build & Deploy Dashboard to Cloud Run
+### 5. Build & Deploy Dashboard to Cloud Run with Dedicated Service Account
 
 > **Working Directory Note**: Run the commands below from the **root directory of the repository** (`ge_agent_extractor/`), where the `dashboard_app` folder is located:
 > ```bash
 > cd /path/to/ge_agent_extractor
 > ```
 
-Build the container image with Cloud Build and deploy to Cloud Run with `--iap` enabled:
+Build the container image with Cloud Build and deploy to Cloud Run with `--iap` enabled and `--service-account` set to `${SA_EMAIL}`:
 
 ```bash
 # A. Submit container build to Cloud Build (from repository root directory)
@@ -94,11 +116,12 @@ gcloud builds submit dashboard_app \
   --tag "gcr.io/${PROJECT_ID}/ge-agent-dashboard-app:latest" \
   --project "${PROJECT_ID}"
 
-# B. Deploy container to Cloud Run with IAP enabled
+# B. Deploy container to Cloud Run using dedicated Service Account and IAP
 gcloud run deploy ge-agent-dashboard-app \
   --image "gcr.io/${PROJECT_ID}/ge-agent-dashboard-app:latest" \
   --region "${REGION}" \
   --project "${PROJECT_ID}" \
+  --service-account "${SA_EMAIL}" \
   --iap \
   --no-allow-unauthenticated \
   --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},BQ_DATASET_ID=${BQ_DATASET_ID},BQ_TABLE_ID=${BQ_TABLE_ID}"
@@ -106,43 +129,25 @@ gcloud run deploy ge-agent-dashboard-app \
 
 ---
 
-### 5. Fetch Dynamic Service URL & Project Number
-Fetch the dynamic Cloud Run URL and default compute service account:
+### 6. Fetch Dynamic Service URL & Configure IAP Access
 
 ```bash
-# Retrieve dynamic Service URL
+# A. Retrieve dynamic Service URL
 DASHBOARD_URL=$(gcloud run services describe ge-agent-dashboard-app --region="${REGION}" --project="${PROJECT_ID}" --format="value(status.url)")
 echo "Dashboard Deployed at: ${DASHBOARD_URL}"
 
-# Retrieve Project Number and Service Account Email
-PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
-COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-```
-
----
-
-### 6. Configure IAM Policy Bindings
-
-Apply necessary IAM permissions for IAP web access and BigQuery data access:
-
-```bash
-# A. Allow Google Workspace domain users to reach the Cloud Run IAP proxy
+# B. Allow Google Workspace domain users to reach the Cloud Run IAP proxy
 gcloud run services add-iam-policy-binding ge-agent-dashboard-app \
   --member="domain:${DOMAIN}" \
   --role="roles/run.invoker" \
   --region="${REGION}" \
   --project="${PROJECT_ID}"
 
-# B. Grant IAP Web Accessor role to initial Admin user
+# C. Grant IAP Web Accessor role to initial Admin user
 gcloud iap web add-iam-policy-binding \
   --member="user:${ADMIN_EMAIL}" \
   --role="roles/iap.httpsResourceAccessor" \
   --project="${PROJECT_ID}"
-
-# C. Grant BigQuery Data Viewer to Cloud Run runtime service account
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${COMPUTE_SA}" \
-  --role="roles/bigquery.dataViewer"
 ```
 
 ---
