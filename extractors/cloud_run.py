@@ -97,6 +97,12 @@ def extract_cloud_run_agents() -> List[Dict[str, Any]]:
                 if svc.template and svc.template.service_account:
                     service_account = f"sa://{svc.template.service_account}"
 
+                # Check if service is a UI dashboard, frontend, or extractor app (and exclude it)
+                is_dashboard_or_ui = any(kw in display_name.lower() for kw in ["dashboard", "extractor", "frontend", "ui-app"])
+                if is_dashboard_or_ui:
+                    logger.info(f"Skipping non-agent UI service: {display_name}")
+                    continue
+
                 # Check if service is an agent (by name keywords or A2A card)
                 is_agent_service = any(kw in display_name.lower() for kw in ["agent", "a2a", "mcp", "assistant", "invoice", "travel", "process"])
                 agent_card = _check_agent_card(uri) if uri else None
