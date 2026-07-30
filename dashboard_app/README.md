@@ -37,7 +37,7 @@ A bespoke, high-performance **React + FastAPI Web Application** that visualizes 
 ## 🔐 Security & Access Control Model
 
 - **Identity-Aware Proxy (IAP)**: Public unauthenticated access is strictly disabled. All incoming web requests are intercepted by Google Cloud IAP and authenticated via Google Workspace OAuth2 SSO (`accounts.google.com`).
-- **Header Injection & Inspection**: FastApi backend inspects `X-Goog-Authenticated-User-Email` and `X-Goog-Iap-Jwt-Assertion` headers injected natively by Google Cloud IAP to enforce authorized identity access.
+- **Header Injection & Inspection**: FastAPI backend inspects `X-Goog-Authenticated-User-Email` and `X-Goog-Iap-Jwt-Assertion` headers injected natively by Google Cloud IAP to enforce authorized identity access.
 
 ---
 
@@ -46,13 +46,15 @@ A bespoke, high-performance **React + FastAPI Web Application** that visualizes 
 Follow these steps to deploy the Dashboard App into a new Google Cloud project from scratch.
 
 ### 1. Define Deployment Environment Variables
-Set shell variables for your GCP project, deployment region, domain, and initial admin email:
+Set shell variables for your GCP project, deployment region, domain, initial admin email, and BigQuery target dataset/table:
 
 ```bash
-export PROJECT_ID="your-gcp-project-id"   # e.g., my-company-agents
-export REGION="us-central1"                # e.g., us-central1
-export DOMAIN="yourcompany.com"            # e.g., mycompany.com
-export ADMIN_EMAIL="admin@yourcompany.com" # e.g., admin@mycompany.com
+export PROJECT_ID="your-gcp-project-id"     # e.g., my-company-agents
+export REGION="us-central1"                  # e.g., us-central1
+export DOMAIN="yourcompany.com"              # e.g., mycompany.com
+export ADMIN_EMAIL="admin@yourcompany.com"   # e.g., admin@mycompany.com
+export BQ_DATASET_ID="ge_agent_inventory"    # e.g., ge_agent_inventory
+export BQ_TABLE_ID="agent_details"           # e.g., agent_details
 ```
 
 ### 2. Enable Required Google Cloud APIs
@@ -78,22 +80,28 @@ Before enabling IAP on Cloud Run, an **OAuth consent screen** must be configured
 ---
 
 ### 4. Build & Deploy Dashboard to Cloud Run
+
+> **Working Directory Note**: Run the commands below from the **root directory of the repository** (`ge_agent_extractor/`), where the `dashboard_app` folder is located:
+> ```bash
+> cd /path/to/ge_agent_extractor
+> ```
+
 Build the container image with Cloud Build and deploy to Cloud Run with `--iap` enabled:
 
 ```bash
-# A. Submit container build to Cloud Build
+# A. Submit container build to Cloud Build (from repository root directory)
 gcloud builds submit dashboard_app \
   --tag "gcr.io/${PROJECT_ID}/ge-agent-dashboard-app:latest" \
   --project "${PROJECT_ID}"
 
-# B. Deploy to Cloud Run with IAP enabled
+# B. Deploy container to Cloud Run with IAP enabled
 gcloud run deploy ge-agent-dashboard-app \
   --image "gcr.io/${PROJECT_ID}/ge-agent-dashboard-app:latest" \
   --region "${REGION}" \
   --project "${PROJECT_ID}" \
   --iap \
   --no-allow-unauthenticated \
-  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},BQ_DATASET_ID=ge_agent_inventory,BQ_TABLE_ID=agent_details"
+  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},BQ_DATASET_ID=${BQ_DATASET_ID},BQ_TABLE_ID=${BQ_TABLE_ID}"
 ```
 
 ---
