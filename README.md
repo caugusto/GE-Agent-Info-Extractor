@@ -9,6 +9,7 @@ A Python application that extracts inventory data for all AI agents across Googl
 - **[DATA_DICTIONARY.md](DATA_DICTIONARY.md)**: Complete BigQuery table data dictionary, column definitions, data types, and extraction logic.
 - **[DEPLOYMENT.md](DEPLOYMENT.md)**: Detailed guide for local setup and deploying as a **Cloud Run Job** + **Cloud Scheduler**.
 - **[PERMISSIONS.md](PERMISSIONS.md)**: GCP IAM roles and fine-grained least-privilege permission requirements for users and service accounts.
+- **[dashboard_app/README.md](dashboard_app/README.md)**: React + FastAPI Web Application Dashboard setup, step-by-step deployment guide for ANY GCP project, screenshots, and IAP user/group access management.
 
 ---
 
@@ -37,6 +38,11 @@ ge_agent_extractor/
 │   ├── vertex_reasoning_engine.py # Agent Platform Engine code agent extractor
 │   ├── cloud_run.py               # Cloud Run & A2A agent service extractor
 │   └── gke.py                     # GKE cluster A2A agent service extractor
+├── dashboard_app/                 # Bespoke React + FastAPI Inventory Dashboard Web App
+│   ├── backend/                   # FastAPI backend server
+│   ├── frontend/                  # React + TailwindCSS frontend UI
+│   ├── docs/screenshots/          # Dashboard visual screenshots
+│   └── README.md                  # Deployment guide for any GCP project & IAP configuration
 ├── main.py                        # Main orchestration entrypoint
 ├── EXTRACTION_ARCHITECTURE.md     # Pipeline execution flow & in-place record enrichment design
 ├── DATA_DICTIONARY.md             # Complete BigQuery data dictionary & extraction rules
@@ -56,7 +62,7 @@ The target BigQuery dataset, table, GCP Project, and scan regions can be configu
 | :--- | :--- | :--- | :--- | :--- |
 | **Dataset Name** | `DEFAULT_BQ_DATASET` | `BQ_DATASET` | `ge_agent_inventory` | Target BigQuery dataset |
 | **Table Name** | `DEFAULT_BQ_TABLE` | `BQ_TABLE` | `agent_details` | Target BigQuery table |
-| **GCP Project** | `PROJECT_ID` | `GCP_PROJECT` | `agentspace-452714` | Target GCP project ID |
+| **GCP Project** | `PROJECT_ID` | `GCP_PROJECT` | `your-gcp-project-id` | Target GCP project ID |
 | **BigQuery Location** | `BQ_LOCATION` | `BQ_LOCATION` | `US` | BigQuery dataset location |
 | **CSV Output** | `DEFAULT_CSV_OUTPUT` | `CSV_OUTPUT` | `agent_inventory_dry_run.csv` | Output CSV file path for dry-run mode |
 | **Default Region** | `REGION` | `REGION` | `us-central1` | Default GCP region for Cloud Run Job & Scheduler |
@@ -78,7 +84,7 @@ Ensure the following Google Cloud APIs are enabled in your project:
 
 ```bash
 # Define GCP project ID environment variable
-export GCP_PROJECT="your-gcp-project-id"  # e.g., agentspace-452714
+export GCP_PROJECT="your-gcp-project-id"
 
 gcloud services enable \
     discoveryengine.googleapis.com \
@@ -136,17 +142,8 @@ You can customize execution parameters by passing options to `main.py`:
 | `-o` | `--output` | CSV output file path for dry-run mode | `agent_inventory_dry_run.csv` |
 | `-s` | `--execution-source` | Execution source tag (`MANUAL_CLI`, `CLOUD_RUN_JOB`, `CLOUD_SCHEDULER`) | Auto-detected |
 
-### Usage Examples
+---
 
-```bash
-# Custom BigQuery dataset and table
-python3 main.py -d my_custom_dataset -t custom_agent_details
+## 📊 Inventory Dashboard App
 
-# Dry run mode (generates CSV without inserting to BigQuery)
-python3 main.py --dry-run -o my_inventory.csv
-
-# Specify custom dataset and execution source
-python3 main.py -d ge_agent_inventory -t agent_details -s MANUAL_CLI
-```
-
-For full deployment instructions to Cloud Run and Cloud Scheduler, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+To deploy the interactive web dashboard to visualize and filter BigQuery agent inventory records, see **[dashboard_app/README.md](dashboard_app/README.md)** for a complete step-by-step deployment guide.

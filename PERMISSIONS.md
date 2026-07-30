@@ -43,9 +43,9 @@ Using `gcloud`:
 
 ```bash
 # Set environment variables
-export GCP_PROJECT="${GCP_PROJECT:-your-gcp-project-id}"
+export PROJECT_ID="${PROJECT_ID:-your-gcp-project-id}"
 export SA_NAME="${SA_NAME:-sa-ge-agent-extractor}"
-export SA_EMAIL="${SA_NAME}@${GCP_PROJECT}.iam.gserviceaccount.com"
+export SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # 1. Create Service Account
 gcloud iam service-accounts create ${SA_NAME} \
@@ -132,6 +132,7 @@ gcloud iam roles create geAgentExtractorRunner \
     --description="Minimal permissions for GE Agent Extractor" \
     --permissions="bigquery.datasets.get,bigquery.datasets.create,bigquery.tables.get,bigquery.tables.create,bigquery.tables.delete,bigquery.tables.updateData,bigquery.tables.getData,bigquery.jobs.create,discoveryengine.engines.get,discoveryengine.engines.list,discoveryengine.dataStores.get,discoveryengine.dataStores.list,discoveryengine.assistants.get,discoveryengine.assistants.list,discoveryengine.agents.get,discoveryengine.agents.list,discoveryengine.agents.getIamPolicy,aiplatform.reasoningEngines.get,aiplatform.reasoningEngines.list,run.services.get,run.services.list,resourcemanager.projects.get" \
     --stage=GA
+```
 
 ---
 
@@ -141,29 +142,75 @@ When serving the **Agent Inventory Dashboard App** via Cloud Run secured with **
 
 | Role Name | IAM Role String | Target Resource | Granted Member | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| **Cloud Run Invoker** | `roles/run.invoker` | Cloud Run Service (`ge-agent-dashboard-app`) | `domain:<YOUR_DOMAIN>`<br>`serviceAccount:service-<PROJECT_NUMBER>@gcp-sa-iap.iam.gserviceaccount.com` | Allows domain users' browser requests to reach Cloud Run IAP authentication proxy. |
-| **IAP Web Accessor** | `roles/iap.httpsResourceAccessor` | IAP Resource (`iap_web`) | `user:admin@caugusto.altostrat.com` (or authorized user/group) | Grants permission to pass through Google Workspace SSO into the dashboard. |
-| **BigQuery Data Viewer** | `roles/bigquery.dataViewer` | GCP Project / Dataset (`ge_agent_inventory`) | `serviceAccount:<PROJECT_NUMBER>-compute@developer.gserviceaccount.com` | Allows backend FastAPI server to run SQL queries against BigQuery table. |
+| **Cloud Run Invoker** | `roles/run.invoker` | Cloud Run Service (`ge-agent-dashboard-app`) | `domain:${DOMAIN}` | Allows Google Workspace domain users' browser requests to reach Cloud Run IAP proxy. |
+| **IAP Web Accessor** | `roles/iap.httpsResourceAccessor` | IAP Resource (`iap_web`) | `user:${USER_EMAIL}`<br>`group:${GROUP_EMAIL}`<br>`domain:${DOMAIN}` | Grants permission to pass through Google Workspace SSO into the dashboard. |
+| **BigQuery Data Viewer** | `roles/bigquery.dataViewer` | GCP Project / Dataset (`ge_agent_inventory`) | `serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com` | Allows backend FastAPI server to run SQL queries against BigQuery table. |
 
-### CLI Commands to Apply Dashboard IAP IAM Policies
+### Parameterized CLI Commands to Apply Dashboard IAM Policies
 
 ```bash
+export PROJECT_ID="your-gcp-project-id"
+export REGION="us-central1"
+export DOMAIN="yourcompany.com"
+export ADMIN_EMAIL="admin@yourcompany.com"
+
+# Fetch project number and compute service account
+PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
 # 1. Allow domain users to reach Cloud Run IAP proxy
 gcloud run services add-iam-policy-binding ge-agent-dashboard-app \
-  --member="domain:caugusto.altostrat.com" \
+  --member="domain:${DOMAIN}" \
   --role="roles/run.invoker" \
-  --region us-central1 \
-  --project agentspace-452714
+  --region="${REGION}" \
+  --project="${PROJECT_ID}"
 
 # 2. Grant IAP web access to authorized admin
 gcloud iap web add-iam-policy-binding \
-  --member="user:admin@caugusto.altostrat.com" \
+  --member="user:${ADMIN_EMAIL}" \
   --role="roles/iap.httpsResourceAccessor" \
-  --project=agentspace-452714
+  --project="${PROJECT_ID}"
 
 # 3. Grant BigQuery Data Viewer to Cloud Run runtime service account
-gcloud projects add-iam-policy-binding agentspace-452714 \
-  --member="serviceAccount:16933400417-compute@developer.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${COMPUTE_SA}" \
   --role="roles/bigquery.dataViewer"
 ```
+
+---
+
+## 👥 How to Add or Remove Additional Users & Google Groups in IAP
+
+To allow additional team members or Google Groups to log in to the Dashboard:
+
+### Grant Access to an Additional Individual User
+```bash
+gcloud iap web add-iam-policy-binding \
+  --member="user:new.user@yourcompany.com" \
+  --role="roles/iap.httpsResourceAccessor" \
+  --project="${PROJECT_ID}"
+```
+
+### Grant Access to an Entire Google Group
+```bash
+gcloud iap web add-iam-policy-binding \
+  --member="group:analytics-team@yourcompany.com" \
+  --role="roles/iap.httpsResourceAccessor" \
+  --project="${PROJECT_ID}"
+```
+
+### Grant Access to ALL Employees in the Google Workspace Domain
+```bash
+gcloud iap web add-iam-policy-binding \
+  --member="domain:yourcompany.com" \
+  --role="roles/iap.httpsResourceAccessor" \
+  --project="${PROJECT_ID}"
+```
+
+### Revoke Access for a User or Group
+```bash
+gcloud iap web remove-iam-policy-binding \
+  --member="user:departed.user@yourcompany.com" \
+  --role="roles/iap.httpsResourceAccessor" \
+  --project="${PROJECT_ID}"
 ```
