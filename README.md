@@ -1,6 +1,6 @@
 # GE Agent Inventory Extractor
 
-A Python application that extracts inventory data for all AI agents across Google Cloud (Gemini Enterprise / Agent Designer No-Code Agents, Agent Platform Engine Reasoning Engines, and Cloud Run Agent Services) and loads them into BigQuery (`ge_agent_inventory.agent_details`).
+A Python application that extracts inventory data for all AI agents across Google Cloud (Gemini Enterprise / Agent Designer No-Code Agents, Agent Platform Engine Reasoning Engines, Cloud Run Agent Services, and GKE Cluster Services) and loads them into BigQuery (`ge_agent_inventory.agent_details`).
 
 ---
 
