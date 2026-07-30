@@ -140,7 +140,47 @@ You can customize execution parameters by passing options to `main.py`:
 | `-t` | `--table` | Specify target BigQuery table name | `agent_details` |
 | | `--dry-run` | Extract agents and output to CSV without inserting into BigQuery | `False` |
 | `-o` | `--output` | CSV output file path for dry-run mode | `agent_inventory_dry_run.csv` |
-| `-s` | `--execution-source` | Execution source tag (`MANUAL_CLI`, `CLOUD_RUN_JOB`, `CLOUD_SCHEDULER`) | Auto-detected |
+### Usage Examples
+
+```bash
+# Custom BigQuery dataset and table
+python3 main.py -d my_custom_dataset -t custom_agent_details
+
+# Dry run mode (generates CSV without inserting to BigQuery)
+python3 main.py --dry-run -o my_inventory.csv
+
+# Specify custom dataset and execution source
+python3 main.py -d ge_agent_inventory -t agent_details -s MANUAL_CLI
+```
+
+---
+
+## ☁️ Cloud Run Job & Cloud Scheduler Deployment
+
+To deploy the Extractor as an automated, containerized **Cloud Run Job** triggered on a recurring cron schedule via **Cloud Scheduler**, refer to the comprehensive step-by-step deployment guide in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+
+### Quick Overview of Cloud Deployment:
+```bash
+# 1. Build and submit container image to Container Registry
+gcloud builds submit --tag "gcr.io/${GCP_PROJECT}/ge-agent-extractor:latest"
+
+# 2. Deploy Cloud Run Job with dedicated Service Account
+gcloud run jobs create ge-agent-extractor-job \
+    --image "gcr.io/${GCP_PROJECT}/ge-agent-extractor:latest" \
+    --region "us-central1" \
+    --service-account "sa-ge-agent-extractor@${GCP_PROJECT}.iam.gserviceaccount.com" \
+    --set-env-vars "GCP_PROJECT=${GCP_PROJECT},BQ_DATASET=ge_agent_inventory,BQ_TABLE=agent_details"
+
+# 3. Schedule automated execution via Cloud Scheduler
+gcloud scheduler jobs create http ge-agent-extractor-schedule \
+    --location "us-central1" \
+    --schedule "0 2 * * *" \
+    --uri "https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${GCP_PROJECT}/jobs/ge-agent-extractor-job:run" \
+    --http-method POST \
+    --oauth-service-account-email "sa-ge-agent-extractor@${GCP_PROJECT}.iam.gserviceaccount.com"
+```
+
+For full environment setup, IAM permissions, service account creation, and scheduler troubleshooting, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 ---
 
