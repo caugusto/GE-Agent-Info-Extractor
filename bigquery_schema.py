@@ -29,7 +29,6 @@ AGENT_DETAILS_SCHEMA = [
     bigquery.SchemaField("author_email", "STRING", mode="NULLABLE", description="Author or creator email address"),
     bigquery.SchemaField("spiffe_id", "STRING", mode="NULLABLE", description="Agent SPIFFE identity URI"),
     bigquery.SchemaField("agent_description", "STRING", mode="NULLABLE", description="Agent description"),
-    bigquery.SchemaField("agent_owner_created_by", "STRING", mode="NULLABLE", description="Agent owner or creator email/service account"),
     bigquery.SchemaField("agent_platform", "STRING", mode="NULLABLE", description="Platform (Gemini Enterprise Agent Designer, Agent Platform Engine, Dialogflow, Cloud Run)"),
     bigquery.SchemaField("agent_created_date", "TIMESTAMP", mode="NULLABLE", description="Creation timestamp"),
     bigquery.SchemaField("agent_modified_date", "TIMESTAMP", mode="NULLABLE", description="Last modification timestamp"),
@@ -136,7 +135,7 @@ def ensure_dataset_and_table(
 
         schema_mismatch = (
             partition_field != "collection_timestamp" or
-            not expected_field_names.issubset(current_field_names)
+            current_field_names != expected_field_names
         )
 
         if schema_mismatch:

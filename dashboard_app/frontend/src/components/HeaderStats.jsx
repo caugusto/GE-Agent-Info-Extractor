@@ -15,6 +15,7 @@ export default function HeaderStats({ stats, filters, setFilters }) {
 
   const instancesBreakdown = stats.instances_breakdown || [];
   const platformsBreakdown = stats.platforms_breakdown || [];
+  const authorsBreakdown = stats.authors_breakdown || [];
 
   // Helper to update filters
   const applyFilter = (key, value) => {
@@ -54,9 +55,9 @@ export default function HeaderStats({ stats, filters, setFilters }) {
         title="Total count of all AI Agents, Reasoning Engines, and Cloud Run services discovered across the organization"
       >
         <div 
-          onClick={() => setFilters(prev => ({ ...prev, platform: '', instance_name: '' }))}
+          onClick={() => setFilters(prev => ({ ...prev, author: '', platform: '', instance_name: '' }))}
           className="cursor-pointer group flex items-start justify-between"
-          title="Click to reset platform/instance filters and show all agents"
+          title="Click to reset author/platform/instance filters and show all agents"
         >
           <div>
             <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1">
@@ -72,46 +73,23 @@ export default function HeaderStats({ stats, filters, setFilters }) {
           </div>
         </div>
 
-        {/* Interactive Clickable Platform Pills with Hover Tooltips */}
+        {/* Interactive Clickable Top Owners (Authors) Pills */}
         <div className="mt-6 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => applyFilter('platform', 'Employee-made: Agent Designer (Gemini Enterprise)')}
-            title="No-Code: Agents created directly in Gemini Enterprise Agent Designer UI"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-              filters.platform === 'Employee-made: Agent Designer (Gemini Enterprise)'
-                ? 'bg-google-blue text-white border-google-blue shadow-xs'
-                : 'bg-blue-50/80 text-google-blue border-blue-200 hover:bg-blue-100'
-            }`}
-          >
-            {stats.count_agent_designer || 0} No-Code
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyFilter('platform', 'Agent Runtime')}
-            title="ADK Code: Code-first Agents built with Google Agent Development Kit (ADK) deployed to Vertex AI Agent Runtime or Reasoning Engines"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-              filters.platform === 'Agent Runtime'
-                ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
-            }`}
-          >
-            {stats.count_agent_runtime || 0} ADK Code
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyFilter('platform', 'Cloud Run (A2A)')}
-            title="Cloud Run: Containerized AI Agents or Agent-to-Agent (A2A) microservices deployed on Cloud Run"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-              filters.platform === 'Cloud Run (A2A)'
-                ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-            }`}
-          >
-            {stats.count_cloud_run || 0} Cloud Run
-          </button>
+          {authorsBreakdown.map((item, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => applyFilter('author', item.name)}
+              title={`Click to filter by owner: ${item.name} (${item.count} agents)`}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer max-w-full truncate ${
+                filters.author === item.name
+                  ? 'bg-google-blue text-white border-google-blue shadow-xs'
+                  : 'bg-blue-50/80 text-google-blue border-blue-200 hover:bg-blue-100'
+              }`}
+            >
+              {item.count} {item.name}
+            </button>
+          ))}
         </div>
       </div>
 

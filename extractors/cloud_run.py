@@ -142,7 +142,6 @@ def extract_cloud_run_agents() -> List[Dict[str, Any]]:
                     "author_email": last_deployed_by if "@" in last_deployed_by else "admin@caugusto.altostrat.com",
                     "spiffe_id": f"principal://run.googleapis.com/{svc_name}",
                     "agent_description": card_desc,
-                    "agent_owner_created_by": last_deployed_by,
                     "agent_platform": "Cloud Run (A2A)",
                     "agent_created_date": created_ts,
                     "agent_modified_date": updated_ts,

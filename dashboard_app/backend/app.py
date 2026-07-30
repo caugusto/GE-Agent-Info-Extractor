@@ -190,6 +190,19 @@ def get_summary_stats(collection_id: Optional[int] = Query(None)):
         plat_job = bq_client.query(q_platforms)
         stats["platforms_breakdown"] = [dict(r) for r in plat_job.result()]
 
+        # Fetch top authors (owners) breakdown
+        q_authors = f"""
+        SELECT 
+            COALESCE(author_email, 'Unknown') as name, 
+            COUNT(*) as count 
+        FROM `{FULL_TABLE_ID}` {where_clause}
+        GROUP BY author_email
+        ORDER BY count DESC
+        LIMIT 4
+        """
+        auth_job = bq_client.query(q_authors)
+        stats["authors_breakdown"] = [dict(r) for r in auth_job.result()]
+
         return stats
     except Exception as e:
         logger.error(f"Error computing stats: {e}")

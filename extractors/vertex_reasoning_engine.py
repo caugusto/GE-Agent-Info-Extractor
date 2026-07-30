@@ -79,7 +79,6 @@ def extract_vertex_reasoning_engines() -> List[Dict[str, Any]]:
                         "author_email": "admin@caugusto.altostrat.com",
                         "spiffe_id": f"principal://aiplatform.googleapis.com/{engine_id}",
                         "agent_description": description,
-                        "agent_owner_created_by": "admin@caugusto.altostrat.com",
                         "agent_platform": "Agent Runtime",
                         "agent_created_date": created_ts,
                         "agent_modified_date": updated_ts,

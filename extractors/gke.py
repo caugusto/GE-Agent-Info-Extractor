@@ -89,7 +89,6 @@ def extract_gke_agents(project_id: str = config.PROJECT_ID, locations: List[str]
                             "author_email": f"gke-admin@{project_id}.iam.gserviceaccount.com",
                             "spiffe_id": spiffe_id,
                             "agent_description": card_desc,
-                            "agent_owner_created_by": f"GKE Cluster ({cluster_name})",
                             "agent_platform": "GKE (A2A)",
                             "agent_created_date": None,
                             "agent_modified_date": None,
