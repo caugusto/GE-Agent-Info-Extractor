@@ -151,6 +151,9 @@ def get_summary_stats(collection_id: Optional[int] = Query(None)):
             COUNTIF(uses_tools IS TRUE) as uses_tools_count,
             COUNTIF(uses_code_execution IS TRUE) as uses_code_count,
             
+            COUNT(DISTINCT gemini_enterprise_instance_name) as distinct_instances_count,
+            COUNT(DISTINCT agent_platform) as distinct_platforms_count,
+
             COUNTIF(agent_platform LIKE '%Agent Designer%') as count_agent_designer,
             COUNTIF(agent_platform LIKE '%Agent Runtime%' OR agent_platform LIKE '%Reasoning Engine%') as count_agent_runtime,
             COUNTIF(agent_platform LIKE '%Cloud Run%') as count_cloud_run,
@@ -161,9 +164,33 @@ def get_summary_stats(collection_id: Optional[int] = Query(None)):
         """
         job = bq_client.query(query)
         results = list(job.result())
-        if results:
-            return dict(results[0])
-        return {}
+        stats = dict(results[0]) if results else {}
+
+        # Fetch instance breakdown
+        q_instances = f"""
+        SELECT 
+            COALESCE(gemini_enterprise_instance_name, 'Unknown') as name, 
+            COUNT(*) as count 
+        FROM `{FULL_TABLE_ID}` {where_clause}
+        GROUP BY gemini_enterprise_instance_name
+        ORDER BY count DESC
+        """
+        inst_job = bq_client.query(q_instances)
+        stats["instances_breakdown"] = [dict(r) for r in inst_job.result()]
+
+        # Fetch platform breakdown
+        q_platforms = f"""
+        SELECT 
+            COALESCE(agent_platform, 'Unknown') as name, 
+            COUNT(*) as count 
+        FROM `{FULL_TABLE_ID}` {where_clause}
+        GROUP BY agent_platform
+        ORDER BY count DESC
+        """
+        plat_job = bq_client.query(q_platforms)
+        stats["platforms_breakdown"] = [dict(r) for r in plat_job.result()]
+
+        return stats
     except Exception as e:
         logger.error(f"Error computing stats: {e}")
         return {}
