@@ -18,3 +18,5 @@ __pycache__/
 
 # Antigravity agent directories / logs
 .agents/
+scratch/
+

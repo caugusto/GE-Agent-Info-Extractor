@@ -1,5 +1,6 @@
 import React from 'react';
-import { Search, RotateCcw, Calendar, Filter, Share2, Globe, Building2, User, Server } from 'lucide-react';
+import { Search, RotateCcw, Calendar } from 'lucide-react';
+import MultiSelectFilter from './MultiSelectFilter';
 
 export default function FilterBar({
   collections,
@@ -72,52 +73,34 @@ export default function FilterBar({
       </div>
 
       {/* Middle Row: Multi-Select Dropdown Filters */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 pt-4 border-t border-slate-200">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 pt-4 border-t border-slate-200">
         
         {/* Project ID */}
-        <div title="Project ID: Filter agents by Google Cloud GCP Project ID">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Project ID</label>
-          <select
-            value={filters.gcp_project_id || ''}
-            onChange={(e) => handleChange('gcp_project_id', e.target.value)}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-google-blue focus:bg-white"
-          >
-            <option value="">All Projects</option>
-            {(filterOptions.projects || []).map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        </div>
+        <MultiSelectFilter
+          label="Project ID"
+          options={filterOptions.projects || []}
+          selected={filters.gcp_project_id || []}
+          onChange={(val) => handleChange('gcp_project_id', val)}
+          placeholder="All Projects"
+        />
 
         {/* Gemini Enterprise Instance */}
-        <div title="GE Instance: Filter agents by Gemini Enterprise / Discovery Engine assistant instance name">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">GE Instance</label>
-          <select
-            value={filters.instance_name || ''}
-            onChange={(e) => handleChange('instance_name', e.target.value)}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-google-blue focus:bg-white"
-          >
-            <option value="">All Instances</option>
-            {(filterOptions.instances || []).map(inst => (
-              <option key={inst} value={inst}>{inst}</option>
-            ))}
-          </select>
-        </div>
+        <MultiSelectFilter
+          label="GE Instance"
+          options={filterOptions.instances || []}
+          selected={filters.instance_name || []}
+          onChange={(val) => handleChange('instance_name', val)}
+          placeholder="All Instances"
+        />
 
         {/* Platform */}
-        <div title="Platform: Filter by deployment architecture (Agent Designer No-Code, Agent Runtime ADK, Cloud Run A2A, etc.)">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Platform</label>
-          <select
-            value={filters.platform || ''}
-            onChange={(e) => handleChange('platform', e.target.value)}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-google-blue focus:bg-white"
-          >
-            <option value="">All Platforms</option>
-            {(filterOptions.platforms || []).map(plat => (
-              <option key={plat} value={plat}>{plat}</option>
-            ))}
-          </select>
-        </div>
+        <MultiSelectFilter
+          label="Platform"
+          options={filterOptions.platforms || []}
+          selected={filters.platform || []}
+          onChange={(val) => handleChange('platform', val)}
+          placeholder="All Platforms"
+        />
 
         {/* Is Shared */}
         <div title="Is Shared: Filter whether an agent is shared with other users (Yes) or private (No)">
@@ -128,7 +111,7 @@ export default function FilterBar({
               const val = e.target.value;
               handleChange('is_shared', val === 'true' ? true : val === 'false' ? false : '');
             }}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-google-blue focus:bg-white"
+            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-google-blue focus:bg-white"
           >
             <option value="">All Sharing</option>
             <option value="true">Yes (Shared)</option>
@@ -136,67 +119,32 @@ export default function FilterBar({
           </select>
         </div>
 
-        {/* Enterprise Scope / Is Available To Everyone */}
-        <div title="Enterprise-Wide: Filter agents accessible to all users in the organization (is_available_to_everyone = TRUE)">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Enterprise-Wide?</label>
-          <select
-            value={filters.is_available_to_everyone === true ? 'true' : filters.is_available_to_everyone === false ? 'false' : ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              handleChange('is_available_to_everyone', val === 'true' ? true : val === 'false' ? false : '');
-            }}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-google-blue focus:bg-white"
-          >
-            <option value="">All Scopes</option>
-            <option value="true">Enterprise (All Users)</option>
-            <option value="false">Restricted / Private</option>
-          </select>
-        </div>
-
-        {/* Access Scope String */}
-        <div title="Scope Tag: Filter by specific access scope tag (Enterprise, Shared Users, Private)">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Scope Tag</label>
-          <select
-            value={filters.scope || ''}
-            onChange={(e) => handleChange('scope', e.target.value)}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-google-blue focus:bg-white"
-          >
-            <option value="">All Scope Tags</option>
-            {(filterOptions.scopes || []).map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
+        {/* Scope Tag */}
+        <MultiSelectFilter
+          label="Scope Tag"
+          options={filterOptions.scopes || []}
+          selected={filters.scope || []}
+          onChange={(val) => handleChange('scope', val)}
+          placeholder="All Scopes"
+        />
 
         {/* Status */}
-        <div title="Status: Filter by publication state (Published Enabled, Published Private, Draft)">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Status</label>
-          <select
-            value={filters.status || ''}
-            onChange={(e) => handleChange('status', e.target.value)}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-google-blue focus:bg-white"
-          >
-            <option value="">All Statuses</option>
-            {(filterOptions.statuses || []).map(st => (
-              <option key={st} value={st}>{st}</option>
-            ))}
-          </select>
-        </div>
+        <MultiSelectFilter
+          label="Status"
+          options={filterOptions.statuses || []}
+          selected={filters.status || []}
+          onChange={(val) => handleChange('status', val)}
+          placeholder="All Statuses"
+        />
 
         {/* Author Email */}
-        <div title="Author Email: Filter agents created by a specific owner/author email">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Author Email</label>
-          <select
-            value={filters.author || ''}
-            onChange={(e) => handleChange('author', e.target.value)}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-google-blue focus:bg-white"
-          >
-            <option value="">All Authors</option>
-            {(filterOptions.authors || []).map(a => (
-              <option key={a} value={a}>{a}</option>
-            ))}
-          </select>
-        </div>
+        <MultiSelectFilter
+          label="Author Email"
+          options={filterOptions.authors || []}
+          selected={filters.author || []}
+          onChange={(val) => handleChange('author', val)}
+          placeholder="All Authors"
+        />
       </div>
 
       {/* Bottom Row: Capability Toggle Buttons */}

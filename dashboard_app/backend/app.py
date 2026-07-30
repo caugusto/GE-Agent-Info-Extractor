@@ -47,9 +47,12 @@ def _get_authenticated_user(request: Request) -> str:
     return os.getenv("DEFAULT_USER_EMAIL", "admin@caugusto.altostrat.com")
 
 
-def _get_target_collection_id(collection_id: Optional[int] = None) -> int:
-    if collection_id is not None:
-        return collection_id
+def _get_target_collection_id(collection_id: Optional[Any] = None) -> int:
+    if collection_id is not None and not hasattr(collection_id, "default") and "Query" not in type(collection_id).__name__:
+        try:
+            return int(collection_id)
+        except Exception:
+            pass
     try:
         q = f"SELECT MAX(collection_id) as max_id FROM `{FULL_TABLE_ID}`"
         res = list(bq_client.query(q).result())
@@ -131,12 +134,102 @@ def get_filter_options(collection_id: Optional[int] = Query(None)):
         return {}
 
 
-@app.get("/api/stats")
-def get_summary_stats(collection_id: Optional[int] = Query(None)):
-    """Computes computational overall stats for selected collection run."""
+def _parse_list_param(param: Optional[Any]) -> List[str]:
+    """Parses single string, comma-separated string, or list parameter into a list of strings."""
+    if param is None:
+        return []
+    # If param is FastAPI Query default object
+    if hasattr(param, "default") or "Query" in type(param).__name__:
+        return []
+    if isinstance(param, list):
+        res = []
+        for item in param:
+            if isinstance(item, str):
+                res.extend([x.strip() for x in item.split(",") if x.strip()])
+            elif item is not None and not hasattr(item, "default"):
+                res.append(str(item))
+        return res
+    if isinstance(param, str):
+        return [x.strip() for x in param.split(",") if x.strip()]
+    return []
+
+
+def _build_in_condition(column_name: str, values: List[str]) -> Optional[str]:
+    """Builds SQL IN condition for a list of values."""
+    if not values:
+        return None
+    escaped = [v.replace("'", "\\'") for v in values]
+    items_str = ", ".join([f"'{v}'" for v in escaped])
+    return f"{column_name} IN ({items_str})"
+
+
+@app.get("/api/filter_options")
+def get_filter_options(collection_id: Optional[int] = Query(None)):
+    """Returns distinct values for dropdown filters."""
     try:
         col_id = _get_target_collection_id(collection_id)
         where_clause = f"WHERE collection_id = {col_id}"
+        
+        query = f"""
+        SELECT 
+            ARRAY_AGG(DISTINCT gcp_project_id IGNORE NULLS) as projects,
+            ARRAY_AGG(DISTINCT gemini_enterprise_instance_name IGNORE NULLS) as instances,
+            ARRAY_AGG(DISTINCT agent_platform IGNORE NULLS) as platforms,
+            ARRAY_AGG(DISTINCT access_scope IGNORE NULLS) as scopes,
+            ARRAY_AGG(DISTINCT agent_status IGNORE NULLS) as statuses,
+            ARRAY_AGG(DISTINCT author_email IGNORE NULLS) as authors,
+            ARRAY_AGG(DISTINCT agent_environment IGNORE NULLS) as environments
+        FROM `{FULL_TABLE_ID}`
+        {where_clause}
+        """
+        job = bq_client.query(query)
+        res = list(job.result())
+        if res:
+            r = dict(res[0])
+            raw_instances = sorted(r.get("instances") or [])
+            # Filter out N/A standalone instances from instances dropdown
+            real_instances = [inst for inst in raw_instances if inst and not inst.startswith("N/A")]
+
+            return {
+                "projects": sorted(r.get("projects") or []),
+                "instances": real_instances,
+                "platforms": sorted(r.get("platforms") or []),
+                "scopes": sorted(r.get("scopes") or []),
+                "statuses": sorted(r.get("statuses") or []),
+                "authors": sorted(r.get("authors") or []),
+                "environments": sorted(r.get("environments") or []),
+            }
+        return {}
+    except Exception as e:
+        logger.error(f"Error fetching filter options: {e}")
+        return {}
+
+
+@app.get("/api/stats")
+def get_summary_stats(
+    collection_id: Optional[int] = Query(None),
+    platform: Optional[List[str]] = Query(None),
+    uses_mcp: Optional[bool] = Query(None),
+):
+    """Computes computational overall stats for selected collection run."""
+    try:
+        col_id = _get_target_collection_id(collection_id)
+        conditions = [f"collection_id = {col_id}"]
+        
+        selected_platforms = _parse_list_param(platform)
+        # Check if user explicitly asked for Agent Registry (MCP)
+        includes_mcp = any("MCP" in p for p in selected_platforms) or uses_mcp is True
+
+        # By default exclude Agent Registry (MCP) unless explicitly requested
+        if not includes_mcp:
+            conditions.append("agent_platform != 'Agent Registry (MCP)'")
+
+        if selected_platforms:
+            plat_cond = _build_in_condition("agent_platform", selected_platforms)
+            if plat_cond:
+                conditions.append(plat_cond)
+
+        where_clause = " WHERE " + " AND ".join(conditions)
         
         query = f"""
         SELECT 
@@ -151,7 +244,7 @@ def get_summary_stats(collection_id: Optional[int] = Query(None)):
             COUNTIF(uses_tools IS TRUE) as uses_tools_count,
             COUNTIF(uses_code_execution IS TRUE) as uses_code_count,
             
-            COUNT(DISTINCT gemini_enterprise_instance_name) as distinct_instances_count,
+            COUNT(DISTINCT IF(gemini_enterprise_instance_name NOT LIKE 'N/A%' AND gemini_enterprise_instance_name IS NOT NULL, gemini_enterprise_instance_name, NULL)) as distinct_instances_count,
             COUNT(DISTINCT agent_platform) as distinct_platforms_count,
 
             COUNTIF(agent_platform LIKE '%Agent Designer%') as count_agent_designer,
@@ -166,12 +259,12 @@ def get_summary_stats(collection_id: Optional[int] = Query(None)):
         results = list(job.result())
         stats = dict(results[0]) if results else {}
 
-        # Fetch instance breakdown
+        # Fetch instance breakdown (ONLY real Gemini Enterprise instances, excluding N/A)
         q_instances = f"""
         SELECT 
-            COALESCE(gemini_enterprise_instance_name, 'Unknown') as name, 
+            gemini_enterprise_instance_name as name, 
             COUNT(*) as count 
-        FROM `{FULL_TABLE_ID}` {where_clause}
+        FROM `{FULL_TABLE_ID}` {where_clause} AND gemini_enterprise_instance_name NOT LIKE 'N/A%' AND gemini_enterprise_instance_name IS NOT NULL
         GROUP BY gemini_enterprise_instance_name
         ORDER BY count DESC
         """
@@ -212,13 +305,13 @@ def get_summary_stats(collection_id: Optional[int] = Query(None)):
 @app.get("/api/agents")
 def get_agents(
     collection_id: Optional[int] = Query(None),
-    gcp_project_id: Optional[str] = Query(None),
-    instance_name: Optional[str] = Query(None),
-    platform: Optional[str] = Query(None),
-    scope: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    author: Optional[str] = Query(None),
-    environment: Optional[str] = Query(None),
+    gcp_project_id: Optional[List[str]] = Query(None),
+    instance_name: Optional[List[str]] = Query(None),
+    platform: Optional[List[str]] = Query(None),
+    scope: Optional[List[str]] = Query(None),
+    status: Optional[List[str]] = Query(None),
+    author: Optional[List[str]] = Query(None),
+    environment: Optional[List[str]] = Query(None),
     search: Optional[str] = Query(None),
     uses_rag: Optional[bool] = Query(None),
     uses_mcp: Optional[bool] = Query(None),
@@ -227,25 +320,50 @@ def get_agents(
     is_shared: Optional[bool] = Query(None),
     is_available_to_everyone: Optional[bool] = Query(None),
 ):
-    """Returns filtered agent records."""
+    """Returns filtered agent records supporting multi-select list values."""
     try:
         col_id = _get_target_collection_id(collection_id)
         conditions = [f"collection_id = {col_id}"]
             
-        if gcp_project_id:
-            conditions.append(f"gcp_project_id = '{gcp_project_id}'")
-        if instance_name:
-            conditions.append(f"gemini_enterprise_instance_name = '{instance_name}'")
-        if platform:
-            conditions.append(f"agent_platform = '{platform}'")
-        if scope:
-            conditions.append(f"access_scope = '{scope}'")
-        if status:
-            conditions.append(f"agent_status = '{status}'")
-        if author:
-            conditions.append(f"author_email = '{author}'")
-        if environment:
-            conditions.append(f"agent_environment = '{environment}'")
+        projects_list = _parse_list_param(gcp_project_id)
+        if projects_list:
+            c = _build_in_condition("gcp_project_id", projects_list)
+            if c: conditions.append(c)
+
+        instances_list = _parse_list_param(instance_name)
+        if instances_list:
+            c = _build_in_condition("gemini_enterprise_instance_name", instances_list)
+            if c: conditions.append(c)
+
+        platforms_list = _parse_list_param(platform)
+        # Exclude Agent Registry (MCP) by default unless requested in platform or uses_mcp
+        includes_mcp = any("MCP" in p for p in platforms_list) or uses_mcp is True
+        if not includes_mcp:
+            conditions.append("agent_platform != 'Agent Registry (MCP)'")
+
+        if platforms_list:
+            c = _build_in_condition("agent_platform", platforms_list)
+            if c: conditions.append(c)
+
+        scopes_list = _parse_list_param(scope)
+        if scopes_list:
+            c = _build_in_condition("access_scope", scopes_list)
+            if c: conditions.append(c)
+
+        statuses_list = _parse_list_param(status)
+        if statuses_list:
+            c = _build_in_condition("agent_status", statuses_list)
+            if c: conditions.append(c)
+
+        authors_list = _parse_list_param(author)
+        if authors_list:
+            c = _build_in_condition("author_email", authors_list)
+            if c: conditions.append(c)
+
+        environments_list = _parse_list_param(environment)
+        if environments_list:
+            c = _build_in_condition("agent_environment", environments_list)
+            if c: conditions.append(c)
             
         if is_shared is True:
             conditions.append("is_shared IS TRUE")
@@ -266,7 +384,7 @@ def get_agents(
         if uses_code is True:
             conditions.append("uses_code_execution = TRUE")
             
-        if search:
+        if search and isinstance(search, str):
             s_clean = search.lower().replace("'", "\\'")
             conditions.append(f"(LOWER(agent_name) LIKE '%{s_clean}%' OR LOWER(agent_id) LIKE '%{s_clean}%' OR LOWER(agent_description) LIKE '%{s_clean}%' OR LOWER(author_email) LIKE '%{s_clean}%')")
 

@@ -10,37 +10,50 @@ export default function HeaderStats({ stats, filters, setFilters }) {
   const restricted = stats.total_restricted_shared || 0;
   const privateCount = stats.total_private || 0;
 
-  const instanceCount = stats.distinct_instances_count || (stats.instances_breakdown ? stats.instances_breakdown.length : 0);
-  const platformCount = stats.distinct_platforms_count || (stats.platforms_breakdown ? stats.platforms_breakdown.length : 0);
-
   const instancesBreakdown = stats.instances_breakdown || [];
+  // Filter out any standalone / N/A instance records from Gemini Instances tile
+  const realInstancesBreakdown = instancesBreakdown.filter(
+    item => item.name && !item.name.startsWith('N/A')
+  );
+  const realInstanceCount = stats.distinct_instances_count ?? realInstancesBreakdown.length;
+
   const platformsBreakdown = stats.platforms_breakdown || [];
+  const platformCount = stats.distinct_platforms_count || platformsBreakdown.length;
   const authorsBreakdown = stats.authors_breakdown || [];
 
-  // Helper to update filters
+  // Helper to toggle value in array filter or string filter
   const applyFilter = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: prev[key] === value ? '' : value
-    }));
+    setFilters(prev => {
+      const current = prev[key];
+      if (Array.isArray(current)) {
+        if (current.includes(value)) {
+          return { ...prev, [key]: current.filter(item => item !== value) };
+        } else {
+          return { ...prev, [key]: [...current, value] };
+        }
+      }
+      return { ...prev, [key]: current === value ? '' : value };
+    });
+  };
+
+  // Helper to check if value is selected in filter
+  const isSelected = (key, value) => {
+    const current = filters[key];
+    if (Array.isArray(current)) return current.includes(value);
+    return current === value;
   };
 
   // Format Standalone vs Instance Name
   const formatInstanceName = (name) => {
     if (!name) return 'Unknown';
-    if (name.includes('N/A (Standalone') || name.startsWith('N/A')) {
-      if (name.includes('Cloud Run')) return 'Cloud Run (Standalone)';
-      if (name.includes('Agent Engine') || name.includes('Reasoning Engine')) return 'Agent Engine (Standalone)';
-      return 'Standalone';
-    }
     return name.replace('Gemini Enterprise: ', '');
   };
 
   // Format Platform display name
   const formatPlatformName = (name) => {
     if (!name) return 'Unknown';
-    if (name.includes('Agent Designer')) return 'No-Code';
-    if (name.includes('Workflow Agent')) return 'Workflow';
+    if (name.includes('Agent Designer')) return 'No-Code (GE)';
+    if (name.includes('Workflow Agent')) return 'Workflow (GE)';
     if (name === 'Agent Runtime') return 'ADK Code';
     if (name === 'Cloud Run (A2A)') return 'Cloud Run';
     return name;
@@ -165,7 +178,7 @@ export default function HeaderStats({ stats, filters, setFilters }) {
       {/* 3. Gemini Instances Card (based on gemini_enterprise_instance_name) */}
       <div 
         className="glass-panel glass-panel-hover p-6 md:p-7 rounded-2xl border-t-4 border-t-purple-600 bg-white flex flex-col justify-between shadow-sm hover:shadow-md"
-        title="Gemini Enterprise Instances: Total distinct Gemini Enterprise instances and standalone environments hosting agents"
+        title="Gemini Enterprise Instances: Total distinct Gemini Enterprise instances hosting agents"
       >
         <div className="flex items-start justify-between">
           <div>
@@ -174,7 +187,7 @@ export default function HeaderStats({ stats, filters, setFilters }) {
               <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
             </p>
             <h3 className="text-4xl md:text-5xl font-black text-slate-900 mt-2 tracking-tight">
-              {instanceCount}
+              {realInstanceCount}
             </h3>
           </div>
           <div className="p-3.5 bg-purple-50 text-purple-600 rounded-2xl shadow-xs">
@@ -184,14 +197,14 @@ export default function HeaderStats({ stats, filters, setFilters }) {
 
         {/* Interactive Clickable Instance Pills with Hover Tooltips */}
         <div className="mt-6 flex flex-wrap items-center gap-2">
-          {instancesBreakdown.map((item, idx) => (
+          {realInstancesBreakdown.map((item, idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => applyFilter('instance_name', item.name)}
               title={`Click to filter by instance: ${item.name} (${item.count} agents)`}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                filters.instance_name === item.name
+                isSelected('instance_name', item.name)
                   ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
                   : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
               }`}
@@ -205,7 +218,7 @@ export default function HeaderStats({ stats, filters, setFilters }) {
       {/* 4. Agent Platforms Card (based on agent_platform) */}
       <div 
         className="glass-panel glass-panel-hover p-6 md:p-7 rounded-2xl border-t-4 border-t-google-red bg-white flex flex-col justify-between shadow-sm hover:shadow-md"
-        title="Agent Platforms: Categorization of agents by platform architecture (Agent Designer, Agent Runtime, Cloud Run, Dialogflow, etc.)"
+        title="Agent Platforms: Categorization of agents by platform architecture (Agent Designer No-Code, Agent Runtime, Cloud Run, Dialogflow, etc.)"
       >
         <div className="flex items-start justify-between">
           <div>
@@ -231,7 +244,7 @@ export default function HeaderStats({ stats, filters, setFilters }) {
               onClick={() => applyFilter('platform', item.name)}
               title={`Click to filter by platform: ${item.name} (${item.count} agents)`}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                filters.platform === item.name
+                isSelected('platform', item.name)
                   ? 'bg-google-red text-white border-google-red shadow-xs'
                   : 'bg-red-50 text-google-red border-red-200 hover:bg-red-100'
               }`}

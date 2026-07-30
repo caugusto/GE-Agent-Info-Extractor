@@ -16,15 +16,15 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
 
-  // Default Filters State
+  // Default Filters State (supporting multi-select array filters)
   const initialFilters = {
-    gcp_project_id: '',
-    instance_name: '',
-    platform: '',
-    scope: '',
-    status: '',
-    author: '',
-    environment: '',
+    gcp_project_id: [],
+    instance_name: [],
+    platform: [],
+    scope: [],
+    status: [],
+    author: [],
+    environment: [],
     search: '',
     is_shared: '', // '' or boolean
     is_available_to_everyone: '', // '' or boolean
@@ -56,22 +56,29 @@ export default function App() {
       .catch(err => console.error('Error fetching collections:', err));
   }, []);
 
-  // Fetch Filter Options & Stats whenever selectedCollection changes
+  // Fetch Filter Options whenever selectedCollection changes
   useEffect(() => {
     const colParam = selectedCollection ? `?collection_id=${selectedCollection}` : '';
-    
-    // Fetch Filter Options
     fetch(`/api/filter_options${colParam}`)
       .then(res => res.json())
       .then(data => setFilterOptions(data))
       .catch(err => console.error('Error fetching filter options:', err));
+  }, [selectedCollection]);
 
-    // Fetch Stats
-    fetch(`/api/stats${colParam}`)
+  // Fetch Stats whenever selectedCollection, filters.platform, or filters.uses_mcp changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedCollection) params.append('collection_id', selectedCollection);
+    if (Array.isArray(filters.platform)) {
+      filters.platform.forEach(p => params.append('platform', p));
+    }
+    if (filters.uses_mcp) params.append('uses_mcp', 'true');
+
+    fetch(`/api/stats?${params.toString()}`)
       .then(res => res.json())
       .then(data => setStats(data))
       .catch(err => console.error('Error fetching stats:', err));
-  }, [selectedCollection]);
+  }, [selectedCollection, filters.platform, filters.uses_mcp]);
 
   // Fetch Agents whenever filters or selectedCollection change
   const fetchAgents = () => {
@@ -79,13 +86,23 @@ export default function App() {
     const params = new URLSearchParams();
     
     if (selectedCollection) params.append('collection_id', selectedCollection);
-    if (filters.gcp_project_id) params.append('gcp_project_id', filters.gcp_project_id);
-    if (filters.instance_name) params.append('instance_name', filters.instance_name);
-    if (filters.platform) params.append('platform', filters.platform);
-    if (filters.scope) params.append('scope', filters.scope);
-    if (filters.status) params.append('status', filters.status);
-    if (filters.author) params.append('author', filters.author);
-    if (filters.environment) params.append('environment', filters.environment);
+    
+    const appendMulti = (key, val) => {
+      if (Array.isArray(val)) {
+        val.forEach(item => params.append(key, item));
+      } else if (val) {
+        params.append(key, val);
+      }
+    };
+
+    appendMulti('gcp_project_id', filters.gcp_project_id);
+    appendMulti('instance_name', filters.instance_name);
+    appendMulti('platform', filters.platform);
+    appendMulti('scope', filters.scope);
+    appendMulti('status', filters.status);
+    appendMulti('author', filters.author);
+    appendMulti('environment', filters.environment);
+
     if (filters.search) params.append('search', filters.search);
     
     if (filters.is_shared === true) params.append('is_shared', 'true');
