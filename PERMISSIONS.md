@@ -29,6 +29,7 @@ Alternatively, for a restricted least-privilege setup, assign the following gran
 | **BigQuery Dataset & Table** | `roles/bigquery.dataEditor` | Create/update dataset & table (`ge_agent_inventory.agent_details`), insert records. |
 | **BigQuery Jobs** | `roles/bigquery.jobUser` | Run SQL queries (`MAX(collection_id)`). |
 | **Discovery Engine** | `roles/discoveryengine.viewer` | Read Gemini Enterprise engines, data stores, assistants, and registered agents. |
+| **Agent Registry** | `roles/agentregistry.viewer` | Read Google Cloud Agent Registry catalog, built-in A2A agents, and MCP servers. |
 | **Agent Platform** | `roles/aiplatform.viewer` | List and get Vertex AI / Agent Engine Reasoning Engines across regions. |
 | **Cloud Run** | `roles/run.viewer` | List Cloud Run agent services and query service metadata. |
 

@@ -74,6 +74,7 @@ for ROLE in \
     "roles/bigquery.dataEditor" \
     "roles/bigquery.jobUser" \
     "roles/discoveryengine.admin" \
+    "roles/agentregistry.viewer" \
     "roles/aiplatform.viewer" \
     "roles/run.viewer" \
     "roles/container.viewer" \
