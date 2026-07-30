@@ -17,9 +17,51 @@ export default function HeaderStats({ stats, filters, setFilters }) {
   );
   const realInstanceCount = stats.distinct_instances_count ?? realInstancesBreakdown.length;
 
-  const platformsBreakdown = stats.platforms_breakdown || [];
-  const platformCount = stats.distinct_platforms_count || platformsBreakdown.length;
+  const rawPlatformsBreakdown = stats.platforms_breakdown || [];
   const authorsBreakdown = stats.authors_breakdown || [];
+
+  // Group platforms mapping helper
+  const getGroupedPlatforms = (breakdown) => {
+    const groups = {};
+    
+    breakdown.forEach(item => {
+      const name = item.name || 'Unknown';
+      let displayName = name;
+      let rawNames = [name];
+
+      if (name.includes('Agent Designer')) {
+        displayName = 'Chat Agent (GE)';
+      } else if (name.includes('Workflow Agent')) {
+        displayName = 'Workflow Agent (GE)';
+      } else if (name === 'Agent Runtime') {
+        displayName = 'ADK Code';
+      } else if (name === 'Cloud Run (A2A)') {
+        displayName = 'Cloud Run';
+      } else if (name === 'Google Built-in Agent' || name === 'Google Built-in Agent (A2A)' || name === 'Agent Registry (A2A)') {
+        displayName = 'Google Built-in Agent';
+        rawNames = ['Google Built-in Agent', 'Google Built-in Agent (A2A)', 'Agent Registry (A2A)'];
+      }
+
+      if (!groups[displayName]) {
+        groups[displayName] = {
+          displayName,
+          count: 0,
+          rawNames: []
+        };
+      }
+      groups[displayName].count += item.count;
+      rawNames.forEach(rn => {
+        if (!groups[displayName].rawNames.includes(rn)) {
+          groups[displayName].rawNames.push(rn);
+        }
+      });
+    });
+
+    return Object.values(groups).sort((a, b) => b.count - a.count);
+  };
+
+  const groupedPlatforms = getGroupedPlatforms(rawPlatformsBreakdown);
+  const platformCount = groupedPlatforms.length;
 
   // Helper to toggle value in array filter or string filter
   const applyFilter = (key, value) => {
@@ -36,6 +78,32 @@ export default function HeaderStats({ stats, filters, setFilters }) {
     });
   };
 
+  // Helper to handle grouped platform selection
+  const handleGroupedPlatformClick = (group) => {
+    setFilters(prev => {
+      const current = prev.platform || [];
+      const allSelected = group.rawNames.every(rn => current.includes(rn));
+      if (allSelected) {
+        return {
+          ...prev,
+          platform: current.filter(rn => !group.rawNames.includes(rn))
+        };
+      } else {
+        const newPlats = new Set([...current, ...group.rawNames]);
+        return {
+          ...prev,
+          platform: Array.from(newPlats)
+        };
+      }
+    });
+  };
+
+  const isGroupSelected = (group) => {
+    const current = filters.platform || [];
+    if (!Array.isArray(current) || current.length === 0) return false;
+    return group.rawNames.some(rn => current.includes(rn));
+  };
+
   // Helper to check if value is selected in filter
   const isSelected = (key, value) => {
     const current = filters[key];
@@ -47,16 +115,6 @@ export default function HeaderStats({ stats, filters, setFilters }) {
   const formatInstanceName = (name) => {
     if (!name) return 'Unknown';
     return name.replace('Gemini Enterprise: ', '');
-  };
-
-  // Format Platform display name
-  const formatPlatformName = (name) => {
-    if (!name) return 'Unknown';
-    if (name.includes('Agent Designer')) return 'No-Code (GE)';
-    if (name.includes('Workflow Agent')) return 'Workflow (GE)';
-    if (name === 'Agent Runtime') return 'ADK Code';
-    if (name === 'Cloud Run (A2A)') return 'Cloud Run';
-    return name;
   };
 
   return (
@@ -237,19 +295,19 @@ export default function HeaderStats({ stats, filters, setFilters }) {
 
         {/* Interactive Clickable Platform Pills with Hover Tooltips */}
         <div className="mt-6 flex flex-wrap items-center gap-2">
-          {platformsBreakdown.map((item, idx) => (
+          {groupedPlatforms.map((group, idx) => (
             <button
               key={idx}
               type="button"
-              onClick={() => applyFilter('platform', item.name)}
-              title={`Click to filter by platform: ${item.name} (${item.count} agents)`}
+              onClick={() => handleGroupedPlatformClick(group)}
+              title={`Click to filter by platform: ${group.displayName} (${group.count} agents)`}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                isSelected('platform', item.name)
+                isGroupSelected(group)
                   ? 'bg-google-red text-white border-google-red shadow-xs'
                   : 'bg-red-50 text-google-red border-red-200 hover:bg-red-100'
               }`}
             >
-              {item.count} {formatPlatformName(item.name)}
+              {group.count} {group.displayName}
             </button>
           ))}
         </div>
