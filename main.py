@@ -10,6 +10,7 @@ from google.cloud import bigquery
 from config import PROJECT_ID, BQ_LOCATION, DEFAULT_BQ_DATASET, DEFAULT_BQ_TABLE, DEFAULT_CSV_OUTPUT
 from bigquery_schema import ensure_dataset_and_table
 from extractors.discovery_engine import extract_discovery_engine_agents
+from extractors.agent_registry import extract_agent_registry_agents
 from extractors.vertex_reasoning_engine import extract_vertex_reasoning_engines
 from extractors.cloud_run import extract_cloud_run_agents
 from extractors.gke import extract_gke_agents
@@ -91,6 +92,14 @@ def _resolve_execution_source(cli_source: str | None = None) -> str:
     return "MANUAL_CLI"
 
 
+def _extract_id_token(id_str: str | None) -> str:
+    """Extracts the trailing resource ID token (e.g. numeric ID) from URN or resource path."""
+    if not id_str or id_str == "N/A":
+        return ""
+    parts = re.split(r"[:/]", str(id_str))
+    return parts[-1] if parts else str(id_str)
+
+
 def run_inventory_extraction(dataset_name: str = DEFAULT_BQ_DATASET, table_name: str = DEFAULT_BQ_TABLE, dry_run: bool = False, csv_output: str = DEFAULT_CSV_OUTPUT, execution_source: str | None = None):
     """Executes full agent inventory extraction and writes results to BigQuery or CSV in dry-run mode."""
     # 1. Validate input parameters
@@ -158,29 +167,66 @@ def run_inventory_extraction(dataset_name: str = DEFAULT_BQ_DATASET, table_name:
                     target_rec[field] = source_val
 
     # Collect reasoning engine IDs and Cloud Run URLs registered in Gemini Enterprise
-    registered_re_ids = set()
+    registered_re_tokens = set()
     registered_cr_urls = set()
+    registered_agent_tokens = set()
 
     for ag in de_agents:
         re_id = ag.get("reasoning_engine_id")
         if re_id and re_id != "N/A":
-            registered_re_ids.add(re_id)
+            registered_re_tokens.add(_extract_id_token(re_id))
         cr_url = ag.get("a2a_agent_url") or ag.get("cloud_run_agent_url")
         if cr_url and cr_url != "N/A":
             registered_cr_urls.add(cr_url)
+        ag_id = ag.get("agent_id")
+        if ag_id:
+            registered_agent_tokens.add(_extract_id_token(ag_id))
+
+    logger.info("Extracting Agent Registry API (A2A & MCP Catalog)...")
+    ar_agents = extract_agent_registry_agents()
+    for ar_ag in ar_agents:
+        ar_id = ar_ag.get("agent_id") or ""
+        ar_token = _extract_id_token(ar_id)
+        ar_url = ar_ag.get("a2a_agent_url") or ""
+        ar_name = ar_ag.get("agent_name") or ""
+
+        matched = False
+        for de_ag in de_agents:
+            de_id = de_ag.get("agent_id") or ""
+            de_re_id = de_ag.get("reasoning_engine_id") or ""
+            de_url = de_ag.get("a2a_agent_url") or ""
+            de_name = de_ag.get("agent_name") or ""
+
+            # Match by Reasoning Engine ID token, URN token, A2A endpoint URL, or exact name
+            if (ar_token and ar_token in [_extract_id_token(de_id), _extract_id_token(de_re_id)]) or \
+               (ar_url and ar_url != "N/A" and ar_url == de_url) or \
+               (ar_name and ar_name != "Agent Registry Service" and ar_name.lower() == de_name.lower()):
+                _enrich_registered_agent(de_ag, ar_ag)
+                matched = True
+                break
+
+        if not matched and ar_token not in registered_agent_tokens:
+            all_agents.append(ar_ag)
+            registered_agent_tokens.add(ar_token)
+            if "reasoningEngines" in ar_id:
+                registered_re_tokens.add(ar_token)
+            if ar_url and ar_url != "N/A":
+                registered_cr_urls.add(ar_url)
 
     logger.info("Extracting Agent Platform Reasoning Engines (ADK Code Agents)...")
     re_agents = extract_vertex_reasoning_engines()
     for re_ag in re_agents:
         re_id = re_ag.get("reasoning_engine_id") or re_ag.get("agent_id")
-        if re_id not in registered_re_ids:
+        re_token = _extract_id_token(re_id)
+        if re_token not in registered_re_tokens and re_token not in registered_agent_tokens:
             all_agents.append(re_ag)
+            registered_re_tokens.add(re_token)
         else:
-            # Enrich the existing registered agent record in de_agents
-            for de_ag in de_agents:
-                target_re_id = de_ag.get("reasoning_engine_id")
-                if target_re_id and (target_re_id == re_id or re_id in target_re_id):
-                    _enrich_registered_agent(de_ag, re_ag)
+            # Enrich the existing registered agent record in all_agents
+            for ag in all_agents:
+                target_re_token = _extract_id_token(ag.get("reasoning_engine_id") or ag.get("agent_id"))
+                if target_re_token and target_re_token == re_token:
+                    _enrich_registered_agent(ag, re_ag)
             logger.info(f"Skipping duplicate standalone Reasoning Engine '{re_ag.get('agent_name')}' ({re_id}) and enriched existing registered agent record with runtime metadata.")
 
     logger.info("Extracting Cloud Run Agent Services...")

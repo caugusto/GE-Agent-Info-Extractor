@@ -10,11 +10,12 @@ The extractor operates in a strict, synchronous 6-stage pipeline to guarantee da
 
 ```mermaid
 graph TD
-    A["Stage 1: Discovery Engine / Gemini Enterprise Extractor<br><i>(Scans all instances, assistants & registered agents)</i>"] --> B["Stage 2: Index Construction<br><i>(Collects all registered Reasoning Engine IDs & Cloud Run/A2A URLs)</i>"]
-    B --> C["Stage 3: Vertex AI Reasoning Engines Extractor<br><i>(Scans standalone engines & performs in-place enrichment)</i>"]
-    C --> D["Stage 4: Cloud Run Services Extractor<br><i>(Scans Cloud Run services & performs in-place enrichment)</i>"]
-    D --> E["Stage 5: GKE Cluster Services Extractor<br><i>(Scans GKE clusters & performs in-place enrichment)</i>"]
-    E --> F["Stage 6: BigQuery Ingestion"]
+    A["Stage 1: Discovery Engine / Gemini Enterprise Extractor<br><i>(Scans all instances, assistants & registered agents)</i>"] --> B["Stage 2: Agent Registry API Extractor<br><i>(Scans agentregistry.googleapis.com for built-in A2A agents & MCP servers)</i>"]
+    B --> C["Stage 3: Index Construction<br><i>(Collects all registered Reasoning Engine IDs & Cloud Run/A2A URLs)</i>"]
+    C --> D["Stage 4: Vertex AI Reasoning Engines Extractor<br><i>(Scans standalone engines & performs in-place enrichment)</i>"]
+    D --> E["Stage 5: Cloud Run Services Extractor<br><i>(Scans Cloud Run services & performs in-place enrichment)</i>"]
+    E --> F["Stage 6: GKE Cluster Services Extractor<br><i>(Scans GKE clusters & performs in-place enrichment)</i>"]
+    F --> G["Stage 7: BigQuery Ingestion"]
 ```
 
 ---

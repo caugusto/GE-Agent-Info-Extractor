@@ -1,6 +1,6 @@
 # GE Agent Inventory Extractor
 
-A Python application that extracts inventory data for all AI agents across Google Cloud (Gemini Enterprise / Agent Designer No-Code Agents, Agent Platform Engine Reasoning Engines, Cloud Run Agent Services, and GKE Cluster Services) and loads them into BigQuery (`ge_agent_inventory.agent_details`).
+A Python application that extracts inventory data for all AI agents across Google Cloud (Gemini Enterprise / Agent Designer No-Code Agents, Agent Registry API Catalog & MCP Servers, Agent Platform Engine Reasoning Engines, Cloud Run Agent Services, and GKE Cluster Services) and loads them into BigQuery (`ge_agent_inventory.agent_details`).
 
 ---
 
@@ -17,6 +17,7 @@ A Python application that extracts inventory data for all AI agents across Googl
 
 - **Multi-Platform Agent Extraction**:
   - **Gemini Enterprise (Agent Designer)**: Queries Discovery Engine engines, data stores, controls, registered agents, and system instructions across all locations.
+  - **Agent Registry API Catalog**: Queries `agentregistry.googleapis.com` for built-in Google A2A agents (e.g., Workspace Agent), A2A skill manifests, and registered MCP servers.
   - **Agent Platform Engine**: Queries Reasoning Engines, python spec, tools, runtime endpoints, and identity.
   - **Cloud Run Agent Services**: Queries container services and A2A (`/.well-known/agent-card.json`) endpoints.
   - **GKE Cluster Agent Services**: Queries Kubernetes Engine clusters for exposed container endpoints serving valid A2A Agent Cards.
@@ -35,6 +36,7 @@ ge_agent_extractor/
 ├── extractors/
 │   ├── __init__.py
 │   ├── discovery_engine.py        # Gemini Enterprise / Agent Designer extractor
+│   ├── agent_registry.py          # Google Cloud Agent Registry API & MCP catalog extractor
 │   ├── vertex_reasoning_engine.py # Agent Platform Engine code agent extractor
 │   ├── cloud_run.py               # Cloud Run & A2A agent service extractor
 │   └── gke.py                     # GKE cluster A2A agent service extractor
