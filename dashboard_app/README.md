@@ -1,6 +1,36 @@
 # Gemini Enterprise Agent Inventory Dashboard App
 
-A bespoke, high-performance **React + FastAPI Web Application** that visualizes the BigQuery Agent Inventory (`ge_agent_inventory.agent_details`), providing overall computational metrics, multi-dimensional filtering, and 360-degree agent detail drill-downs.
+A bespoke, high-performance **React + FastAPI Web Application** that visualizes the BigQuery Agent Inventory (`ge_agent_inventory.agent_details`), providing overall computational metrics, multi-dimensional filtering, interactive KPI stat toggles, mouse-hover term definitions, full CSV export, and 360-degree agent detail drill-downs.
+
+---
+
+## 📸 Dashboard Screenshots & Visual Interface
+
+### 1. Overview & Computational Summary Header
+![Dashboard Overview Overview](docs/screenshots/dashboard_overview.png)
+
+*Interactive KPI Summary Stat Cards, Snapshot Run selector, Multi-Select filters (`Is Shared?`, `Enterprise-Wide?`, `Project ID`, `Platform`), Capability toggles, and Global Search.*
+
+---
+
+### 2. Tabular Inventory View & CSV Export
+![Dashboard Table View](docs/screenshots/dashboard_table_view.png)
+
+*Data Table View with platform badges, sharing scope tags, status badges, author emails, and one-click Export to CSV function.*
+
+---
+
+### 3. Agent Metadata & Permissions Drill-Down Drawer
+![Agent Detail Drawer 1](docs/screenshots/agent_detail_drawer_1.png)
+
+*360-degree Inspector Drawer displaying description, Gemini Enterprise instance, GCP Project ID, SPIFFE Identity URI, Sharing Scope, and System Prompt/Instructions.*
+
+---
+
+### 4. Cloud Run Container & A2A Skills Specs
+![Agent Detail Drawer 2](docs/screenshots/agent_detail_drawer_2.png)
+
+*Detailed Execution Specs for Cloud Run & Agent-to-Agent (A2A) microservices, container image URIs, endpoints, and A2A skills array.*
 
 ---
 
@@ -73,18 +103,21 @@ gcloud projects add-iam-policy-binding agentspace-452714 \
 
 ## 🎨 UI Features & Design System
 
-- **Deep Pitch Black Theme**: `#000000` / `#08080C` background with subtle dark glassmorphic cards (`#121218`).
-- **Google Brand Accent Colors**: Google Blue (`#4285F4`), Google Green (`#34A853`), Google Yellow (`#FBBC05`), Google Red (`#EA4335`).
-- **Computational Summary Header**: Real-time KPI cards for Total Agents, Sharing Exposure Rate (% Enterprise, % Restricted, % Private), RAG Adoption, MCP Integrations, and Tooling.
+- **Clean White Light Theme**: Crisp `#F8FAFC` background with white cards (`#FFFFFF`), subtle slate borders (`#E2E8F0`), and high-contrast typography (`#0F172A`).
+- **Mouse Hover Tooltips**: Mouse-over explanations for terms such as `No-Code`, `ADK Code`, `Cloud Run`, `Enterprise`, `Restricted`, `Private`, `RAG / Data Stores`, `MCP Servers`, `Python Sandbox`, and status tags.
+- **Interactive KPI Card Filters**: Clicking any badge pill or stat card directly sets or toggles that filter.
+- **Google Brand Accent Colors**: Google Blue (`#1A73E8`), Google Green (`#137333`), Google Yellow (`#B06000`), Google Red (`#C5221F`), Google Purple (`#9334E6`).
+- **Export to CSV**: One-click download of filtered list containing **all columns/fields**.
 - **Snapshot Run Dropdown**: Select specific `collection_id` runs or view latest.
 - **Multi-Filter Toolbar**:
   - `gcp_project_id`
   - `gemini_enterprise_instance_name`
   - `agent_platform`
+  - `is_shared` (Yes / No)
+  - `is_available_to_everyone` (Enterprise / Restricted)
   - `access_scope`
   - `agent_status`
   - `author_email`
-  - `agent_environment`
   - Real-time Global Search bar & capability toggles (`Data Stores / RAG`, `MCP`, `External Tools`, `Python Sandbox`).
 - **Slide-Over Detail Inspector**: Clicking any card or table row opens a side-drawer showing:
   - SPIFFE URI, Author Email, Version history.

@@ -25,7 +25,10 @@ export default function FilterBar({
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         
         {/* Collection Snapshot Selector */}
-        <div className="flex items-center gap-3 bg-slate-100/80 px-4 py-3 rounded-xl border border-slate-200">
+        <div 
+          className="flex items-center gap-3 bg-slate-100/80 px-4 py-3 rounded-xl border border-slate-200"
+          title="Snapshot Run: Select a specific BigQuery extraction run timestamp to view historical inventory"
+        >
           <Calendar className="w-5 h-5 text-google-blue shrink-0" />
           <div className="flex flex-col">
             <span className="text-[11px] uppercase font-extrabold text-slate-500 tracking-wider">Snapshot Run</span>
@@ -52,6 +55,7 @@ export default function FilterBar({
             placeholder="Search by Agent Name, ID, Author Email, or Instructions..."
             value={filters.search || ''}
             onChange={(e) => handleChange('search', e.target.value)}
+            title="Global Search: Type agent name, agent ID, owner email, or prompt instructions"
             className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-google-blue focus:bg-white transition-colors"
           />
         </div>
@@ -59,6 +63,7 @@ export default function FilterBar({
         {/* Reset Button */}
         <button
           onClick={onReset}
+          title="Reset All Filters: Clear all search terms, dropdown selections, and capability toggles"
           className="flex items-center justify-center gap-2 px-5 py-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs md:text-sm font-extrabold text-slate-700 transition-all cursor-pointer shadow-2xs"
         >
           <RotateCcw className="w-4 h-4 text-slate-600" />
@@ -70,7 +75,7 @@ export default function FilterBar({
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 pt-4 border-t border-slate-200">
         
         {/* Project ID */}
-        <div>
+        <div title="Project ID: Filter agents by Google Cloud GCP Project ID">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Project ID</label>
           <select
             value={filters.gcp_project_id || ''}
@@ -85,7 +90,7 @@ export default function FilterBar({
         </div>
 
         {/* Gemini Enterprise Instance */}
-        <div>
+        <div title="GE Instance: Filter agents by Gemini Enterprise / Discovery Engine assistant instance name">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">GE Instance</label>
           <select
             value={filters.instance_name || ''}
@@ -100,7 +105,7 @@ export default function FilterBar({
         </div>
 
         {/* Platform */}
-        <div>
+        <div title="Platform: Filter by deployment architecture (Agent Designer No-Code, Agent Runtime ADK, Cloud Run A2A, etc.)">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Platform</label>
           <select
             value={filters.platform || ''}
@@ -115,7 +120,7 @@ export default function FilterBar({
         </div>
 
         {/* Is Shared */}
-        <div>
+        <div title="Is Shared: Filter whether an agent is shared with other users (Yes) or private (No)">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Is Shared?</label>
           <select
             value={filters.is_shared === true ? 'true' : filters.is_shared === false ? 'false' : ''}
@@ -132,7 +137,7 @@ export default function FilterBar({
         </div>
 
         {/* Enterprise Scope / Is Available To Everyone */}
-        <div>
+        <div title="Enterprise-Wide: Filter agents accessible to all users in the organization (is_available_to_everyone = TRUE)">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Enterprise-Wide?</label>
           <select
             value={filters.is_available_to_everyone === true ? 'true' : filters.is_available_to_everyone === false ? 'false' : ''}
@@ -149,7 +154,7 @@ export default function FilterBar({
         </div>
 
         {/* Access Scope String */}
-        <div>
+        <div title="Scope Tag: Filter by specific access scope tag (Enterprise, Shared Users, Private)">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Scope Tag</label>
           <select
             value={filters.scope || ''}
@@ -164,7 +169,7 @@ export default function FilterBar({
         </div>
 
         {/* Status */}
-        <div>
+        <div title="Status: Filter by publication state (Published Enabled, Published Private, Draft)">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Status</label>
           <select
             value={filters.status || ''}
@@ -179,7 +184,7 @@ export default function FilterBar({
         </div>
 
         {/* Author Email */}
-        <div>
+        <div title="Author Email: Filter agents created by a specific owner/author email">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 block">Author Email</label>
           <select
             value={filters.author || ''}
@@ -201,6 +206,7 @@ export default function FilterBar({
         <button
           type="button"
           onClick={() => handleToggle('uses_rag')}
+          title="Data Stores / RAG: Filter agents attached to Knowledge Sources, Google Drive, Gmail, BQ, or Vertex AI Search"
           className={`px-4 py-2 rounded-xl text-xs md:text-sm font-extrabold transition-all border cursor-pointer ${
             filters.uses_rag
               ? 'bg-google-green text-white border-google-green shadow-xs'
@@ -213,6 +219,7 @@ export default function FilterBar({
         <button
           type="button"
           onClick={() => handleToggle('uses_mcp')}
+          title="Model Context Protocol (MCP): Filter agents integrating external MCP server tools"
           className={`px-4 py-2 rounded-xl text-xs md:text-sm font-extrabold transition-all border cursor-pointer ${
             filters.uses_mcp
               ? 'bg-google-red text-white border-google-red shadow-xs'
@@ -225,6 +232,7 @@ export default function FilterBar({
         <button
           type="button"
           onClick={() => handleToggle('uses_tools')}
+          title="External Tools: Filter agents with function calling, extension APIs, or external tool integrations"
           className={`px-4 py-2 rounded-xl text-xs md:text-sm font-extrabold transition-all border cursor-pointer ${
             filters.uses_tools
               ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
@@ -237,6 +245,7 @@ export default function FilterBar({
         <button
           type="button"
           onClick={() => handleToggle('uses_code')}
+          title="Python Sandbox / Code: Filter agents executing dynamic Python code in an isolated sandbox"
           className={`px-4 py-2 rounded-xl text-xs md:text-sm font-extrabold transition-all border cursor-pointer ${
             filters.uses_code
               ? 'bg-purple-600 text-white border-purple-600 shadow-xs'

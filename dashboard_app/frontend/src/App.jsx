@@ -3,7 +3,7 @@ import HeaderStats from './components/HeaderStats';
 import FilterBar from './components/FilterBar';
 import AgentCard from './components/AgentCard';
 import AgentDetailDrawer from './components/AgentDetailDrawer';
-import { Bot, Grid, List, RefreshCw, ShieldCheck, User, Download, RotateCcw, FileSpreadsheet } from 'lucide-react';
+import { Bot, Grid, List, RefreshCw, User, Download, RotateCcw, FileSpreadsheet } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -182,15 +182,10 @@ export default function App() {
             </div>
           </div>
 
-          {/* User Profile & Security Badge */}
+          {/* User Profile */}
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-green-50 border border-green-200 text-google-green text-xs font-bold">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Cloud Run IAP Protected</span>
-            </div>
-
             {user && (
-              <div className="flex items-center gap-3 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200">
+              <div className="flex items-center gap-3 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200" title={`Logged in as ${user.email}`}>
                 <div className="w-8 h-8 rounded-full bg-google-blue text-white flex items-center justify-center font-bold text-sm shadow-xs">
                   {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
                 </div>
@@ -208,7 +203,7 @@ export default function App() {
       {/* Main Dashboard Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Computational Summary Stats Cards with Clickable Filters */}
+        {/* Computational Summary Stats Cards with Clickable Filters & Mouse Hover Tooltips */}
         <HeaderStats stats={stats} filters={filters} setFilters={setFilters} />
 
         {/* Multi-Dimensional Filter Toolbar */}
@@ -238,6 +233,7 @@ export default function App() {
             <button
               onClick={handleExportCSV}
               disabled={agents.length === 0}
+              title="Export currently filtered list of agents as CSV file with all columns"
               className="flex items-center gap-2 px-4 py-2.5 bg-google-green hover:bg-green-700 text-white rounded-xl text-xs md:text-sm font-extrabold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
               <FileSpreadsheet className="w-4 h-4" />
@@ -248,6 +244,7 @@ export default function App() {
             <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
               <button
                 onClick={() => setViewMode('grid')}
+                title="Switch to Card Grid View"
                 className={`p-2.5 rounded-lg text-xs md:text-sm font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
                   viewMode === 'grid' ? 'bg-google-blue text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
@@ -257,6 +254,7 @@ export default function App() {
 
               <button
                 onClick={() => setViewMode('table')}
+                title="Switch to Data Table View"
                 className={`p-2.5 rounded-lg text-xs md:text-sm font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
                   viewMode === 'table' ? 'bg-google-blue text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
@@ -318,7 +316,10 @@ export default function App() {
                     >
                       <td className="p-4 font-bold text-slate-900">{ag.agent_name}</td>
                       <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-google-blue font-bold border border-blue-200 text-xs">
+                        <span 
+                          title={`Platform: ${ag.agent_platform}`}
+                          className="px-2.5 py-1 rounded-lg bg-blue-100 text-google-blue font-bold border border-blue-200 text-xs"
+                        >
                           {(ag.agent_platform || '').replace('Employee-made: ', '')}
                         </span>
                       </td>
@@ -329,6 +330,13 @@ export default function App() {
                       </td>
                       <td className="p-4">
                         <span
+                          title={
+                            ag.is_available_to_everyone
+                              ? "Enterprise: Published enterprise-wide to all users in the organization"
+                              : ag.is_shared
+                              ? "Restricted: Shared explicitly with a list of specific users"
+                              : "Private: Kept private by the author"
+                          }
                           className={`font-bold ${
                             ag.is_available_to_everyone
                               ? 'text-google-green'
@@ -341,13 +349,25 @@ export default function App() {
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-lg bg-green-100 text-google-green font-bold border border-green-200 text-xs">
+                        <span 
+                          title={
+                            (ag.agent_status || '').includes('Enabled')
+                              ? "Published (Enabled): Agent is actively published and enabled for interactions"
+                              : (ag.agent_status || '').includes('Private')
+                              ? "Published (Private): Agent is published by owner but kept private"
+                              : "Draft: Agent is in draft status"
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-green-100 text-google-green font-bold border border-green-200 text-xs"
+                        >
                           {ag.agent_status || 'Published'}
                         </span>
                       </td>
                       <td className="p-4 text-slate-600 font-semibold">{ag.author_email}</td>
                       <td className="p-4">
-                        <button className="px-3 py-1.5 bg-slate-100 hover:bg-google-blue text-slate-700 hover:text-white rounded-lg border border-slate-200 text-xs font-bold transition-all cursor-pointer">
+                        <button 
+                          title="Click to view full agent metadata, permissions & instructions"
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-google-blue text-slate-700 hover:text-white rounded-lg border border-slate-200 text-xs font-bold transition-all cursor-pointer"
+                        >
                           Inspect
                         </button>
                       </td>
