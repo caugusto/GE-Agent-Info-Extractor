@@ -4,7 +4,7 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ ./
-RUN npm run build
+RUN rm -rf dist && npm run build
 
 # Stage 2: Python FastAPI Production Server
 FROM python:3.11-slim
